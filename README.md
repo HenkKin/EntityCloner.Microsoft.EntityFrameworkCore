@@ -51,32 +51,30 @@ using EntityCloner.Microsoft.EntityFrameworkCore.EntityFrameworkCore.SqlServer;
 
 public class YourClass
 {
-    ...
-    
-    // This method gets called by the runtime. Use this method to add services to the container.
-    public async Task YourMethod(DbContext dbContext)
-    {
+	   
+	// This method gets called by the runtime. Use this method to add services to the container.
+	public async Task YourMethod(DbContext dbContext)
+	{
 		var entityId = 10;
 
 		// To clone only the entity:
 		var clonedOrderEntity = await dbContext.CloneAsync<Order>(entityId);
-           
+
 		// To clone entity with related data
-        	var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<TestEntity>(
+		var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<TestEntity>(
 			includeQuery => includeQuery
-			    .Include(o => o.OrderLines)
-				.ThenInclude(ol => ol.Discounts)
-			    .Include(o => o.Customer)
-				.ThenInclude(x => x.CustomerAddresses)
-			    .Include(o => o.Customer)
-				.ThenInclude(x => x.Invoices) 
-				    .ThenInclude(x => x.InvoiceLines),
+				.Include(o => o.OrderLines)
+					.ThenInclude(ol => ol.Discounts)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.CustomerAddresses)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.Invoices) 
+						.ThenInclude(x => x.InvoiceLines),
 			entityId);
-		...
-		
-    }
-    
-    ...
+
+	}
+}
+
 ```
 
 ### Debugging
