@@ -62,15 +62,16 @@ public class YourClass
 		var clonedOrderEntity = await dbContext.CloneAsync<Order>(entityId);
            
 		// To clone entity with related data
-        	var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<TestEntity>(includeQuery => includeQuery
-                    .Include(o => o.OrderLines)
-						.ThenInclude(ol => ol.Discounts)
-                    .Include(o => o.Customer)
-						.ThenInclude(x => x.CustomerAddresses)
-                    .Include(o => o.Customer)
-						.ThenInclude(x => x.Invoices) 
-                            .ThenInclude(x => x.InvoiceLines) 
-				entityId);
+        	var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<TestEntity>(
+			includeQuery => includeQuery
+			    .Include(o => o.OrderLines)
+				.ThenInclude(ol => ol.Discounts)
+			    .Include(o => o.Customer)
+				.ThenInclude(x => x.CustomerAddresses)
+			    .Include(o => o.Customer)
+				.ThenInclude(x => x.Invoices) 
+				    .ThenInclude(x => x.InvoiceLines),
+			entityId);
 		...
 		
     }
