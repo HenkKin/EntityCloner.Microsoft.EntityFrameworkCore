@@ -12,7 +12,7 @@
     <PackageTags>Clone DeepClone Entity Entities Include ThenInclude Core EntityFramework EF</PackageTags>
     <Description>Cloning entities using EntityFrameworkCore configuration</Description>
     <Copyright>Henk Kin</Copyright>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <IncludeSymbols>true</IncludeSymbols>
