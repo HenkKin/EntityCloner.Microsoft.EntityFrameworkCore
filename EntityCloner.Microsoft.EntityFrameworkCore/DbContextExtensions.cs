@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore;
@@ -25,9 +26,27 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             var  primaryKeyProperties = source.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey()?.Properties?.Select(p=>p.PropertyInfo).ToList();
             if (primaryKeyProperties == null)
             {
-                throw new NotSupportedException($"CloneAsync only can handle types with PrimaryKey configuration'");
+                throw new NotSupportedException("CloneAsync only can handle types with PrimaryKey configuration'");
             }
 
+            var primaryKeyExpression = CreatePrimaryKeyExpression<TEntity>(primaryKey, primaryKeyProperties);
+
+            var query = source.Set<TEntity>().AsNoTracking().Where(primaryKeyExpression);
+
+            var clonableQueryable = new ClonableQueryable<TEntity>(query);
+
+            clonableQueryable = (ClonableQueryable<TEntity>)includeQuery(clonableQueryable);
+
+            var entity = await clonableQueryable.Queryable.SingleAsync();
+
+            var clonedEntity = (TEntity)source.InternalClone(entity, new Dictionary<object, object>());
+
+            return clonedEntity;
+        }
+
+        private static Expression<Func<TEntity, bool>> CreatePrimaryKeyExpression<TEntity>(object[] primaryKey, List<PropertyInfo> primaryKeyProperties)
+            where TEntity : class
+        {
             Expression<Func<TEntity, bool>> primaryKeyExpression = e => true;
 
             for (int i = 0; i < primaryKeyProperties.Count; i++)
@@ -37,25 +56,15 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
                 if (idPart?.GetType() != primaryKeyProperty.PropertyType)
                 {
-                    throw new NotSupportedException($"CloneAsync only can handle id of type '{primaryKeyProperty.PropertyType.FullName}', passed id of type '{idPart?.GetType().FullName}'");
+                    throw new NotSupportedException(
+                        $"CloneAsync only can handle id of type '{primaryKeyProperty.PropertyType.FullName}', passed id of type '{idPart?.GetType().FullName}'");
                 }
 
                 var idPartPredicate = BuildPredicate<TEntity>(primaryKeyProperty.Name, ExpressionType.Equal, idPart.ToString());
                 primaryKeyExpression = AndAlso(primaryKeyExpression, idPartPredicate);
             }
 
-            var query = source.Set<TEntity>().AsNoTracking().Where(primaryKeyExpression);
-
-            IClonableQueryable<TEntity> cloneableQueryable = new ClonableQueryable<TEntity>(query);
-
-            cloneableQueryable = includeQuery(cloneableQueryable);
-
-            var sqlServerClonableQueryable = (ClonableQueryable<TEntity>)cloneableQueryable;
-
-            var entity = await sqlServerClonableQueryable.Queryable.SingleAsync();
-
-            var clonedEntity = (TEntity)source.InternalClone(entity, new Dictionary<object, object>());
-            return clonedEntity;
+            return primaryKeyExpression;
         }
 
         private static Expression<Func<T, bool>> BuildPredicate<T>(string propertyName, ExpressionType comparison, string value)
@@ -118,20 +127,15 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
             references.Add(entity, clonedEntity);
 
-            foreach (var property in source.Model.FindEntityType(entity.GetType()).GetProperties())
-            {
-                if (property.IsConcurrencyToken)
-                {
-                    ResetProperty(property, clonedEntity);
-                }
+            source.ResetEntityProperties(entity, clonedEntity);
 
-                if (property.IsPrimaryKey())
-                {
-                    // TODO: bij Translations hebben we een samengestelde primary key, LocaleId gaat dan ook leeg
-                    ResetProperty(property, clonedEntity);
-                }
-            }
+            source.ResetNavigationProperties(entity, references, clonedEntity);
 
+            return clonedEntity;
+        }
+
+        private static void ResetNavigationProperties(this DbContext source, object entity, Dictionary<object, object> references, object clonedEntity)
+        {
             foreach (var navigation in source.Model.FindEntityType(entity.GetType()).GetNavigations())
             {
                 var navigationValue = navigation.PropertyInfo.GetValue(entity);
@@ -148,14 +152,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 {
                     if (navigation.IsCollection())
                     {
-                        var list = (IList)Activator.CreateInstance(typeof(Collection<>).MakeGenericType(navigation.ClrType.GenericTypeArguments[0]));
-                        foreach (var item in (IEnumerable)navigationValue)
-                        {
-                            var clonedItemValue = source.InternalClone(item, references);
-                            list.Add(clonedItemValue);
-                        }
-
-                        navigation.PropertyInfo.SetValue(clonedEntity, list);
+                        var collection = InternalCloneCollection(source, references, navigation, navigationValue);
+                        navigation.PropertyInfo.SetValue(clonedEntity, collection);
                     }
                     else
                     {
@@ -164,8 +162,36 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     }
                 }
             }
+        }
 
-            return clonedEntity;
+        private static IList InternalCloneCollection(DbContext source, Dictionary<object, object> references, INavigation navigation,
+            object navigationValue)
+        {
+            var list = (IList) Activator.CreateInstance(
+                typeof(Collection<>).MakeGenericType(navigation.ClrType.GenericTypeArguments[0]));
+            foreach (var item in (IEnumerable) navigationValue)
+            {
+                var clonedItemValue = source.InternalClone(item, references);
+                list.Add(clonedItemValue);
+            }
+
+            return list;
+        }
+
+        private static void ResetEntityProperties(this DbContext source, object entity, object clonedEntity)
+        {
+            foreach (var property in source.Model.FindEntityType(entity.GetType()).GetProperties())
+            {
+                if (property.IsConcurrencyToken)
+                {
+                    ResetProperty(property, clonedEntity);
+                }
+
+                if (property.IsPrimaryKey())
+                {
+                    ResetProperty(property, clonedEntity);
+                }
+            }
         }
 
         private static void ResetProperty(IProperty property, object entity)
@@ -175,14 +201,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 return;
             }
 
-            if (property.IsNullable)
-            {
-                property.PropertyInfo.SetValue(entity, null);
-            }
-            else
-            {
-                property.PropertyInfo.SetValue(entity, GetDefault(property.ClrType));
-            }
+            property.PropertyInfo.SetValue(entity, property.IsNullable ? null : GetDefault(property.ClrType));
         }
 
         private static object GetDefault(Type type)

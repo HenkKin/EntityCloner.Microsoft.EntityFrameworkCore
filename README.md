@@ -39,9 +39,26 @@ This package provides two extension methods for `DbContext`:
 
 - `Task<TEntity> CloneAsync<TEntity>(this DbContext source, Func<IClonableQueryable<TEntity>, IClonableQueryable<TEntity>> includeQuery, params object[] primaryKey)`
 
-These extension methods supports cloning an entity.
+These extension methods supports cloning an entity. Be aware: the cloned entity is not tracked by the ChangeTracker of EntityFrameworkCore. You should add it manually to the DbSet.
 
-If you provide IncludeQuery configuration, then the included entities will be cloned to. It also supports primarty keys based on multiple properties.
+#### Only clone the entities you want to clone
+
+If you provide IncludeQuery configuration, then the included entities will be cloned too. The Include and ThenInclude works same way as EntityFrameworkCore for querying with Linq. 
+
+#### Based on EntityFrameworkCore configuration Model
+
+It will clone the entity with related entities based on EntityFrameworkCore configuration model. 
+
+#### Resetting properties to default value
+
+During cloning, all PrimaryKey, ForeignKey (except for some exceptions) and ConcurrencyToken properties will be reset to default values
+
+If a ForeignKey entity is not included, then the ForeignKey property will not be reset. This is for example in cases when you have a ForeignKey to an entity from a selection list.
+
+#### Support for Composite PrimaryKeys
+
+It also supports primarty keys based on multiple properties.
+
 
 To use it:
 
