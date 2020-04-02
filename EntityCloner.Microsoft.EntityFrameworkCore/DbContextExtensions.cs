@@ -60,14 +60,14 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                         $"CloneAsync only can handle id of type '{primaryKeyProperty.PropertyType.FullName}', passed id of type '{idPart?.GetType().FullName}'");
                 }
 
-                var idPartPredicate = BuildPredicate<TEntity>(primaryKeyProperty.Name, ExpressionType.Equal, idPart.ToString());
+                var idPartPredicate = BuildPredicate<TEntity>(primaryKeyProperty.Name, ExpressionType.Equal, idPart);
                 primaryKeyExpression = AndAlso(primaryKeyExpression, idPartPredicate);
             }
 
             return primaryKeyExpression;
         }
 
-        private static Expression<Func<T, bool>> BuildPredicate<T>(string propertyName, ExpressionType comparison, string value)
+        private static Expression<Func<T, bool>> BuildPredicate<T>(string propertyName, ExpressionType comparison, object value)
         {
             var parameter = Expression.Parameter(typeof(T), "x");
             var left = propertyName.Split('.').Aggregate((Expression)parameter, Expression.Property);
@@ -93,26 +93,9 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     Expression.Invoke(expr2, param)), param);
         }
 
-        private static Expression MakeBinary(ExpressionType type, Expression left, string value)
+        private static Expression MakeBinary(ExpressionType type, Expression left, object value)
         {
-            object typedValue = value;
-            if (left.Type != typeof(string))
-            {
-                if (string.IsNullOrEmpty(value))
-                {
-                    typedValue = null;
-                    if (Nullable.GetUnderlyingType(left.Type) == null)
-                        left = Expression.Convert(left, typeof(Nullable<>).MakeGenericType(left.Type));
-                }
-                else
-                {
-                    var valueType = Nullable.GetUnderlyingType(left.Type) ?? left.Type;
-                    typedValue = valueType.IsEnum ? Enum.Parse(valueType, value) :
-                        valueType == typeof(Guid) ? Guid.Parse(value) :
-                        Convert.ChangeType(value, valueType);
-                }
-            }
-            var right = Expression.Constant(typedValue, left.Type);
+            var right = Expression.Constant(value, left.Type);
             return Expression.MakeBinary(type, left, right);
         }
 
