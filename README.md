@@ -152,6 +152,8 @@ Set the following settings:
 
 [&nbsp;&nbsp;] Enable Just My Code
 
+[X] Enable .NET Framework source stepping
+
 [X] Enable source server support
 
 [X] Enable source link support
