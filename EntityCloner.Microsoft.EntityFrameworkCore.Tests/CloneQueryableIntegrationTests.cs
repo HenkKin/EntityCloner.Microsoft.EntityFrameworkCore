@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestBase;
 using EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 {
-    public class CloneEntityWithIncludesIntegrationTests : DbContextTestBase
+    [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
+    public class CloneQueryableIntegrationTests : DbContextTestBase
     {
         private readonly DateTime _birthDate = new DateTime(1980, 01, 01);
         private readonly DateTime _offerDate = new DateTime(2020, 2, 20);
@@ -18,7 +21,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
         private readonly Customer _customer;
 
-        public CloneEntityWithIncludesIntegrationTests() : base(nameof(CloneEntityWithIncludesIntegrationTests))
+        public CloneQueryableIntegrationTests() : base(nameof(CloneQueryableIntegrationTests))
         {
             _customer = new Customer
             {
@@ -95,35 +98,47 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         [Fact]
         public async Task Customer_IncludeEntityWithoutIncludeForOwnsEntityAddress()
         {
+            // Arrange
+            var queryable = TestDbContext.Set<Customer>()
+                .Where(c=>c.Id == _customer.Id);
+
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                , _customer.Id);
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
-            Assert.NotNull(clone.Address);
+            var clone = Assert.Single(cloneList);
+            Assert.NotNull(clone?.Address);
         }
 
         [Fact]
         public async Task Customer_IncludeEntityWithIncludeForOwnsEntityAddress()
         {
+            // Arrange
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Address)
+                .Where(c => c.Id == _customer.Id);
+
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Address)
-                , _customer.Id);
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
-            Assert.NotNull(clone.Address);
+            var clone = Assert.Single(cloneList);
+            Assert.NotNull(clone?.Address);
         }
 
         [Fact]
         public async Task Customer_IncludeEntityWithoutOrderLines()
         {
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Orders)
-                , _customer.Id);
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Orders)
+                .Where(c => c.Id == _customer.Id);
+
+            // Act
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
+            var clone = Assert.Single(cloneList);
             Assert.Empty(clone.Orders.SelectMany(o => o.OrderLines));
         }
 
@@ -131,12 +146,16 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         public async Task Customer_IncludeEntityWithOrderLines()
         {
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Orders)
-                    .ThenInclude(c => c.OrderLines)
-                , _customer.Id);
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Orders)
+                .ThenInclude(c => c.OrderLines)
+                .Where(c => c.Id == _customer.Id);
+
+            // Act
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
+            var clone = Assert.Single(cloneList);
             Assert.Equal(2, clone.Orders.SelectMany(o => o.OrderLines).Count());
         }
 
@@ -144,13 +163,17 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         public async Task Customer_IncludeEntityWithoutArticleTranslations()
         {
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Orders)
-                    .ThenInclude(c => c.OrderLines)
-                    .ThenInclude(c => c.Article)
-                , _customer.Id);
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Orders)
+                .ThenInclude(c => c.OrderLines)
+                .ThenInclude(c => c.Article)
+                .Where(c => c.Id == _customer.Id);
+
+            // Act
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
+            var clone = Assert.Single(cloneList);
             Assert.Empty(clone.Orders.SelectMany(o => o.OrderLines.SelectMany(ol => ol.Article.ArticleTranslations)));
         }
 
@@ -158,14 +181,18 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         public async Task Customer_IncludeEntityWithArticleTranslations()
         {
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Orders)
-                    .ThenInclude(c => c.OrderLines)
-                    .ThenInclude(c => c.Article)
-                    .ThenInclude(c => c.ArticleTranslations)
-                , _customer.Id);
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Orders)
+                .ThenInclude(c => c.OrderLines)
+                .ThenInclude(c => c.Article)
+                .ThenInclude(c => c.ArticleTranslations)
+                .Where(c => c.Id == _customer.Id);
+
+            // Act
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
+            var clone = Assert.Single(cloneList);
             Assert.Equal(4, clone.Orders.SelectMany(o => o.OrderLines.SelectMany(ol => ol.Article.ArticleTranslations)).Count());
         }
 
@@ -173,16 +200,20 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         public async Task Customer_IncludeEntityWithAllPossibleIncludes()
         {
             // Act
-            var clone = await TestDbContext.CloneAsync<Customer>(x => x
-                    .Include(c => c.Orders)
-                    .ThenInclude(c => c.OrderLines)
-                    .ThenInclude(c => c.Article)
-                    .ThenInclude(c => c.ArticleTranslations)
-                    .Include(c => c.Orders)
-                    .Include(c => c.Address)
-                , _customer.Id);
+            var queryable = TestDbContext.Set<Customer>()
+                .Include(c => c.Orders)
+                .ThenInclude(c => c.OrderLines)
+                .ThenInclude(c => c.Article)
+                .ThenInclude(c => c.ArticleTranslations)
+                .Include(c => c.Orders)
+                .Include(c => c.Address)
+                .Where(c => c.Id == _customer.Id);
+
+            // Act
+            var cloneList = (await TestDbContext.CloneAsync(queryable)).ToList();
 
             // Assert
+            var clone = Assert.Single(cloneList);
 
             // Customer
             Assert.Equal(0, clone.Id);

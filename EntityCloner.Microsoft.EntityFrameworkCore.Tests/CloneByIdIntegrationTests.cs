@@ -8,9 +8,9 @@ using Xunit;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 {
-    public class CloneSingleEntityIntegrationTests : DbContextTestBase
+    public class CloneByIdIntegrationTests : DbContextTestBase
     {
-        public CloneSingleEntityIntegrationTests() : base(nameof(CloneSingleEntityIntegrationTests))
+        public CloneByIdIntegrationTests() : base(nameof(CloneByIdIntegrationTests))
         {
         }
 

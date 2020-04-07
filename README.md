@@ -59,6 +59,11 @@ If a ForeignKey entity is not included, then the ForeignKey property will not be
 
 It also supports primarty keys based on multiple properties.
 
+#### Support for IQueryable<T> and (list of) plain entities
+
+It also supports plain classes, IQueryable<T> and all type of lists like T[], IEnumerables<T>, IList<T> ICollection<T> and the implementation variants of it.
+
+The only requirement is, that the entity should be part of the model configuration of EntityFrameworkCore.
 
 To use it:
 
@@ -78,7 +83,7 @@ public class YourClass
 		var clonedOrderEntity = await dbContext.CloneAsync<Order>(entityId);
 
 		// To clone entity with related data
-		var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<TestEntity>(
+		var clonedOrderEntityWithRelatedEntities = await dbContext.CloneAsync<Order>(
 			includeQuery => includeQuery
 				.Include(o => o.OrderLines)
 					.ThenInclude(ol => ol.Discounts)
@@ -89,6 +94,49 @@ public class YourClass
 						.ThenInclude(x => x.InvoiceLines),
 			entityId);
 
+		// To clone using IQueryable
+		var entityId = 10;
+		var query = DbSet<TestEntity>.AsNoTracking()
+				.Include(o => o.OrderLines)
+					.ThenInclude(ol => ol.Discounts)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.CustomerAddresses)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.Invoices) 
+						.ThenInclude(x => x.InvoiceLines)
+				.Where(o => o.Id == entityId);
+
+		var clonedOrderEntityViaQueryable = await dbContext.CloneAsync(query);
+
+		// To clone using entity
+		var entityId = 10;
+		var entity = await DbSet<TestEntity>.AsNoTracking()
+				.Include(o => o.OrderLines)
+					.ThenInclude(ol => ol.Discounts)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.CustomerAddresses)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.Invoices) 
+						.ThenInclude(x => x.InvoiceLines)
+				.Where(o => o.Id == entityId)
+				.SingleAsync();
+
+		var clonedOrderEntityViaEntity = await dbContext.CloneAsync(entity);
+
+		// To clone using list of entities
+		var entityId = 10;
+		var entities = await DbSet<TestEntity>.AsNoTracking()
+				.Include(o => o.OrderLines)
+					.ThenInclude(ol => ol.Discounts)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.CustomerAddresses)
+				.Include(o => o.Customer)
+					.ThenInclude(x => x.Invoices) 
+						.ThenInclude(x => x.InvoiceLines)
+				.Where(o => o.Id == entityId)
+				.ToListAsync();
+
+		var clonedOrderEntitiesViaList = await dbContext.CloneAsync(entities);
 	}
 }
 
