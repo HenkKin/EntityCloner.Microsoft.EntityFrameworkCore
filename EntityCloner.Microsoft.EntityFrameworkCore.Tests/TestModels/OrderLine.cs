@@ -9,5 +9,6 @@
         public int OrderId { get; set; }
         public Order Order { get; set; }
         public decimal Quantity { get; set; }
+        public Money UnitPrice { get; set; }
     }
 }

@@ -32,7 +32,11 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 Address = new Address
                 {
                     HouseNumber = 25,
-                    Street = "Street"
+                    Street = "Street",
+                    Country = new Country
+                    {
+                        Name = "Netherlands"
+                    }
                 },
                 Orders = new List<Order>
                 {
@@ -46,6 +50,15 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                         OrderDate = _orderDate,
                         OrderStatus = OrderStatus.Order,
                         TenantId = 1,
+                        InstallationAddress = new Address
+                        {
+                            HouseNumber = 25,
+                            Street = "Street",
+                            Country = new Country
+                            {
+                                Name = "Netherlands"
+                            }
+                        },
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine

@@ -9,6 +9,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
         public byte[] RowVersion { get; set; }
         public DateTime BirthDate { get; set; }
         public Address Address { get; set; }
+
         public ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }

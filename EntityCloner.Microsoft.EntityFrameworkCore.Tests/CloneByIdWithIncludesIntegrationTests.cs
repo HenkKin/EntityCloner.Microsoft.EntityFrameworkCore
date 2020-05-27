@@ -20,6 +20,10 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
         public CloneByIdWithIncludesIntegrationTests() : base(nameof(CloneByIdWithIncludesIntegrationTests))
         {
+            var country = new Country
+            {
+                Name = "Netherlands"
+            };
             _customer = new Customer
             {
                 RowVersion = new[] { byte.MinValue },
@@ -27,7 +31,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 Address = new Address
                 {
                     HouseNumber = 25,
-                    Street = "Street"
+                    Street = "Street",
+                    Country = country
                 },
                 Orders = new List<Order>
                 {
@@ -41,13 +46,22 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                         OrderDate = _orderDate,
                         OrderStatus = OrderStatus.Order,
                         TenantId = 1,
+                        InstallationAddress = new Address
+                        {
+                            HouseNumber = 25,
+                            Street = "Street",
+                            Country = country
+                        },
+                        TotalOrderPrice = new Money{ Amount = 1000m, Currency = "EUR"},
                         OrderLines = new List<OrderLine>
                         {
                             new OrderLine
                             {
                                 Quantity = 1,
+                                UnitPrice  = new Money{ Amount = 500m, Currency = "EUR"},
                                 Article = new Article
                                 {
+
                                     ArticleTranslations = new List<ArticleTranslation>
                                     {
                                         new ArticleTranslation
@@ -66,6 +80,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                             new OrderLine
                             {
                                 Quantity = 2,
+                                UnitPrice  = new Money{ Amount = 250m, Currency = "EUR"},
                                 Article = new Article
                                 {
                                     ArticleTranslations = new List<ArticleTranslation>
@@ -109,6 +124,10 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             // Act
             var clone = await TestDbContext.CloneAsync<Customer>(x => x
                     .Include(c => c.Address)
+                    //.ThenInclude(c => c.Country)
+                    .Include(c => c.Orders)
+                    .ThenInclude(c => c.InstallationAddress)
+                    //.ThenInclude(c => c.Country)
                 , _customer.Id);
 
             // Assert

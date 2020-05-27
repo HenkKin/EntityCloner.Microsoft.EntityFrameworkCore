@@ -20,16 +20,43 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
             modelBuilder.Entity<Customer>().HasKey(x => x.Id);
             modelBuilder.Entity<Customer>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<Customer>().Property(x => x.RowVersion).IsRowVersion();
-            modelBuilder.Entity<Customer>().OwnsOne(x => x.Address);
+            modelBuilder.Entity<Customer>().OwnsOne(x => x.Address, addressBuilder=>
+            {
+                addressBuilder.Property(x => x.CountryId).IsRequired();
+                addressBuilder.HasOne(a => a.Country)
+                    .WithMany()
+                    .HasForeignKey(address => address.CountryId)
+                    .IsRequired()
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            
 
             modelBuilder.Entity<Order>().HasKey(x => x.Id);
             modelBuilder.Entity<Order>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<Order>().Property(x => x.RowVersion).IsRowVersion();
+            modelBuilder.Entity<Order>().OwnsOne(x => x.InstallationAddress, addressBuilder =>
+            {
+                addressBuilder.Property(x => x.CountryId).IsRequired();
+                addressBuilder.HasOne(a => a.Country)
+                    .WithMany()
+                    .HasForeignKey(address => address.CountryId)
+                    .IsRequired()
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<Order>().OwnsOne(x=>x.TotalOrderPrice, moneyBuilder =>
+            {
+                moneyBuilder.Property(e => e.Amount).IsRequired();
+                moneyBuilder.Property(e => e.Currency).IsRequired();
+            });
 
             modelBuilder.Entity<OrderLine>().HasKey(x => x.Id);
             modelBuilder.Entity<OrderLine>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<OrderLine>().Property(x => x.RowVersion).IsRowVersion();
-
+            modelBuilder.Entity<OrderLine>().OwnsOne(x => x.UnitPrice, moneyBuilder =>
+            {
+                moneyBuilder.Property(e => e.Amount).IsRequired();
+                moneyBuilder.Property(e => e.Currency).IsRequired();
+            });
             modelBuilder.Entity<Article>().HasKey(x => x.Id);
             modelBuilder.Entity<Article>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<Article>().Property(x => x.RowVersion).IsRowVersion();
