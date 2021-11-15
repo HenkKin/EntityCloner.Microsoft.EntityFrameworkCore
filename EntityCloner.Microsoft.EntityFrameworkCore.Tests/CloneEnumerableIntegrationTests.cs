@@ -127,6 +127,22 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         }
 
         [Fact]
+        public async Task Customer_ArrayWithMultipleItems()
+        {
+            // Arrange
+            OrderLine[] entities = await TestDbContext.Set<OrderLine>()
+                .AsNoTracking()
+                .Take(2)
+                .ToArrayAsync();
+
+            // Act
+            var cloneList = await TestDbContext.CloneAsync(entities);
+
+            // Assert
+            Assert.Equal(2, cloneList.Length);
+        }
+
+        [Fact]
         public async Task Customer_IEnumerable()
         {
             // Arrange
