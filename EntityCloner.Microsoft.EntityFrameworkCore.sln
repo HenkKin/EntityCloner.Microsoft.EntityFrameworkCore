@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29324.140
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32811.315
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EntityCloner.Microsoft.EntityFrameworkCore", "EntityCloner.Microsoft.EntityFrameworkCore\EntityCloner.Microsoft.EntityFrameworkCore.csproj", "{7AAE45FB-0999-43ED-965B-46265C082B66}"
 EndProject
@@ -9,12 +9,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.bettercodehub.yml = .bettercodehub.yml
 		appveyor.yml = appveyor.yml
+		NuGet.config = NuGet.config
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EntityCloner.Microsoft.EntityFrameworkCore.Tests", "EntityCloner.Microsoft.EntityFrameworkCore.Tests\EntityCloner.Microsoft.EntityFrameworkCore.Tests.csproj", "{17103929-A451-4F41-B180-4AEC268CB17F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks", "EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks\EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks.csproj", "{A9567CB6-9CFE-4C89-85DC-D89D11131DB1}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks", "EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks\EntityCloner.Microsoft.EntityFrameworkCore.Benchmarks.csproj", "{A9567CB6-9CFE-4C89-85DC-D89D11131DB1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
