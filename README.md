@@ -2,7 +2,6 @@
 EntityCloner.Microsoft.EntityFrameworkCore
 =========================================
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore?branch=master&svg=true)](https://ci.appveyor.com/project/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore) 
-[![BCH compliance](https://bettercodehub.com/edge/badge/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore?branch=master)](https://bettercodehub.com/)
 [![NuGet](https://img.shields.io/nuget/dt/EntityCloner.Microsoft.EntityFrameworkCore.svg)](https://www.nuget.org/packages/EntityCloner.Microsoft.EntityFrameworkCore) 
 [![NuGet](https://img.shields.io/nuget/vpre/EntityCloner.Microsoft.EntityFrameworkCore.svg)](https://www.nuget.org/packages/EntityCloner.Microsoft.EntityFrameworkCore)
 
