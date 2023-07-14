@@ -38,7 +38,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                         Name = "Netherlands"
                     }
                 },
-                Orders = new List<Order>
+                Orders = new HashSet<Order>
                 {
                     new Order
                     {
@@ -59,14 +59,14 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                                 Name = "Netherlands"
                             }
                         },
-                        OrderLines = new List<OrderLine>
+                        OrderLines = new HashSet<OrderLine>
                         {
                             new OrderLine
                             {
                                 Quantity = 1,
                                 Article = new Article
                                 {
-                                    ArticleTranslations = new List<ArticleTranslation>
+                                    ArticleTranslations = new HashSet<ArticleTranslation>
                                     {
                                         new ArticleTranslation
                                         {
@@ -86,7 +86,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                                 Quantity = 2,
                                 Article = new Article
                                 {
-                                    ArticleTranslations = new List<ArticleTranslation>
+                                    ArticleTranslations = new HashSet<ArticleTranslation>
                                     {
                                         new ArticleTranslation
                                         {
@@ -186,6 +186,24 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
             // Act
             var cloneList = await TestDbContext.CloneAsync(new Collection<Customer>(entities));
+
+            // Assert
+            Assert.Single((IEnumerable)cloneList);
+        }
+
+
+
+        [Fact]
+        public async Task Customer_HashSet()
+        {
+            // Arrange
+            var entities = await TestDbContext.Set<Customer>()
+                .Where(c => c.Id == _customer.Id)
+                .AsNoTracking()
+                .ToArrayAsync();
+
+            // Act
+            var cloneList = await TestDbContext.CloneAsync(new HashSet<Customer>(entities));
 
             // Assert
             Assert.Single((IEnumerable)cloneList);
