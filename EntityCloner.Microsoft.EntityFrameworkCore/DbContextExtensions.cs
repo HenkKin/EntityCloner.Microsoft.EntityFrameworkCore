@@ -29,7 +29,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
         {
             IReadOnlyEntityType entityType;
             if ((typeof(TEntity).IsGenericType && typeof(TEntity).GetGenericTypeDefinition() == typeof(IEnumerable<>)) ||
-                (typeof(TEntity).GetInterfaces().Any(i=>i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))))
+                (typeof(TEntity).GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>))))
             {
                 var entityClrType = (typeof(TEntity).HasElementType ? typeof(TEntity).GetElementType() : typeof(TEntity).GenericTypeArguments[0]) ?? typeof(TEntity);
 
@@ -50,7 +50,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             {
                 throw new ArgumentException($"Argument should be a known entity of the DbContext", nameof(entityOrListOfEntities));
             }
-            
+
             var clonedEntity = (TEntity)source.InternalClone(entityOrListOfEntities, null, null, new Dictionary<object, object>());
 
             return await Task.FromResult(clonedEntity);
@@ -66,7 +66,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             where TEntity : class
         {
             var entityType = source.FindCurrentEntityType(typeof(TEntity), null, null);
-            var  primaryKeyProperties = entityType?.FindPrimaryKey()?.Properties.Select(p=>p.PropertyInfo).ToList();
+            var primaryKeyProperties = entityType?.FindPrimaryKey()?.Properties.Select(p => p.PropertyInfo).ToList();
             if (primaryKeyProperties == null)
             {
                 throw new NotSupportedException("CloneAsync only can handle types with PrimaryKey configuration'");
@@ -213,30 +213,79 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
         {
             foreach (var navigation in source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType).GetNavigations())
             {
-                var navigationValue = navigation.PropertyInfo?.GetValue(entity);
+                ResetNavigationProperty(source, entity, references, clonedEntity, navigation);
+            }
 
-                if (navigation.IsOnDependent && navigationValue != null)
+            // var entityName = entity.GetType().Name;
+            var model = source.Model.FindEntityType(entity.GetType());
+            if (model != null)
+            {
+                IEnumerable<ISkipNavigation> skipNavigations = model.GetSkipNavigations();
+
+                foreach (var navigation in skipNavigations)
                 {
-                    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
-                    {
-                        ResetProperty(foreignKeyProperty, clonedEntity);
-                    }
+                    ResetSkipNavigationProperty(source, entity, references, clonedEntity, navigation);
                 }
+            }
+        }
 
-                if (navigationValue != null)
+        private static void ResetNavigationProperty<TNavigation>(DbContext source, object entity, Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
+            where TNavigation : IReadOnlyNavigation
+        {
+            var navigationValue = navigation.PropertyInfo?.GetValue(entity);
+
+            if (navigation.IsOnDependent && navigationValue != null)
+            {
+                foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
                 {
-                    if (navigation.IsCollection)
-                    {
-                        //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);
-                        var collection = source.InternalCloneCollection(references, navigation.ClrType.GenericTypeArguments[0], navigation.Name, navigation.DeclaringEntityType, (IEnumerable)navigationValue);
-                        navigation.PropertyInfo.SetValue(clonedEntity, collection);
-                    }
-                    else
-                    {
-                        //var clonedPropertyValue = source.InternalClone(navigationValue, navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, references);
-                        var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
-                        navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
-                    }
+                    ResetProperty(foreignKeyProperty, clonedEntity);
+                }
+            }
+
+            if (navigationValue != null)
+            {
+                if (navigation.IsCollection)
+                {
+                    //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);
+                    var collection = source.InternalCloneCollection(references, navigation.ClrType.GenericTypeArguments[0], navigation.Name, navigation.DeclaringEntityType, (IEnumerable)navigationValue);
+                    navigation.PropertyInfo.SetValue(clonedEntity, collection);
+                }
+                else
+                {
+                    //var clonedPropertyValue = source.InternalClone(navigationValue, navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, references);
+                    var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
+                    navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
+                }
+            }
+        }
+
+
+        private static void ResetSkipNavigationProperty<TNavigation>(DbContext source, object entity, Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
+            where TNavigation : ISkipNavigation
+        {
+            var navigationValue = navigation.PropertyInfo?.GetValue(entity);
+
+            if (navigation.IsOnDependent && navigationValue != null)
+            {
+                foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+                {
+                    ResetProperty(foreignKeyProperty, clonedEntity);
+                }
+            }
+
+            if (navigationValue != null)
+            {
+                if (navigation.IsCollection)
+                {
+                    //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);
+                    var collection = source.InternalCloneCollection(references, navigation.ClrType.GenericTypeArguments[0], navigation.Name, navigation.DeclaringEntityType, (IEnumerable)navigationValue);
+                    navigation.PropertyInfo.SetValue(clonedEntity, collection);
+                }
+                else
+                {
+                    //var clonedPropertyValue = source.InternalClone(navigationValue, navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, references);
+                    var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
+                    navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
                 }
             }
         }
@@ -278,7 +327,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             if (!string.IsNullOrEmpty(definingNavigationName) && definingEntityType != null)
             {
                 var entity = source.Model.FindEntityType(entityClrType, definingNavigationName, definingEntityType);
-                if(entity != null)
+                if (entity != null)
                 {
                     return entity;
                 }
