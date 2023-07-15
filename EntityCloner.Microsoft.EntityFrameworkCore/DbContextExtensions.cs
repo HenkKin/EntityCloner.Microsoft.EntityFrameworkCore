@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -294,7 +293,9 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static IEnumerable InternalCloneCollection(this DbContext source, Dictionary<object, object> references, Type collectionItemType, string definingNavigationName, IReadOnlyEntityType definingEntityType, IEnumerable collectionValue)
         {
-            var list = (IList)Activator.CreateInstance(typeof(Collection<>).MakeGenericType(collectionItemType));
+            // https://learn.microsoft.com/en-us/ef/core/modeling/relationships/navigations#collection-types
+            // The underlying collection instance must be implement ICollection<T>, and must have a working Add method. It is common to use List<T> or HashSet<T>
+            var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(collectionItemType));
             if (list == null)
             {
                 throw new ArgumentNullException(nameof(collectionItemType));
