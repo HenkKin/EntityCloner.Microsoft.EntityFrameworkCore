@@ -211,12 +211,14 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static void ResetNavigationProperties(this DbContext source, object entity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references, object clonedEntity)
         {
+            // NOTE: source.FindCurrentEnttityType or source.Model.FIndEntityType, what is the difference?
             foreach (var navigation in source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType).GetNavigations())
             {
                 ResetNavigationProperty(source, entity, references, clonedEntity, navigation);
             }
 
             // var entityName = entity.GetType().Name;
+            // NOTE: why not use source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType)?
             var model = source.Model.FindEntityType(entity.GetType());
             if (model != null)
             {
