@@ -37,7 +37,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 entityType = source.FindCurrentEntityType(entityClrType, null, null);
                 if (entityType == null)
                 {
-                    throw new ArgumentException($"Argument should be a known entity of the DbContext", nameof(entityOrListOfEntities));
+                    throw new ArgumentException("Argument should be a known entity of the DbContext", nameof(entityOrListOfEntities));
                 }
 
                 var clonedEntities = source.InternalCloneCollection(new Dictionary<object, object>(), entityClrType, null, null, (IEnumerable)entityOrListOfEntities);
@@ -49,7 +49,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
             if (entityType == null)
             {
-                throw new ArgumentException($"Argument should be a known entity of the DbContext", nameof(entityOrListOfEntities));
+                throw new ArgumentException("Argument should be a known entity of the DbContext", nameof(entityOrListOfEntities));
             }
 
             var clonedEntity = (TEntity)source.InternalClone(entityOrListOfEntities, null, null, new Dictionary<object, object>());
