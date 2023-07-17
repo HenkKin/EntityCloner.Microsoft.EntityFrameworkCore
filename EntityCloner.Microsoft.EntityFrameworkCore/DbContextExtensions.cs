@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore;
@@ -172,19 +174,14 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 return references[entity];
             }
 
-            object clonedEntity;
-            // in case of owned type
-            if (!string.IsNullOrEmpty(definingNavigationName) && definingEntityType != null)
+            JsonSerializerOptions jsonSerializerOptions = new()
             {
-                // TODO: clone entity instead of assigning original reference
-                clonedEntity = entity;
-            }
-            else
-            {
-                var entityEntry = source.Entry(entity);
-                clonedEntity = entityEntry.CurrentValues.ToObject();
-            }
-
+                ReferenceHandler = ReferenceHandler.Preserve,
+                WriteIndented = true
+            };
+            string jsonString = JsonSerializer.Serialize(entity, jsonSerializerOptions);
+            object clonedEntity = JsonSerializer.Deserialize(jsonString, entity.GetType(), jsonSerializerOptions);
+            
             references.Add(entity, clonedEntity);
             // source.CloneOwnedEntityProperties(entity, definingNavigationName, definingEntityType, references, clonedEntity);
 
@@ -210,19 +207,15 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static void ResetNavigationProperties(this DbContext source, object entity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references, object clonedEntity)
         {
-            // NOTE: source.FindCurrentEnttityType or source.Model.FIndEntityType, what is the difference?
-            foreach (var navigation in source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType).GetNavigations())
+            var entityType = source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType);
+            if (entityType != null)
             {
-                ResetNavigationProperty(source, entity, references, clonedEntity, navigation);
-            }
+                foreach (var navigation in entityType.GetNavigations())
+                {
+                    ResetNavigationProperty(source, entity, references, clonedEntity, navigation);
+                }
 
-            // var entityName = entity.GetType().Name;
-            // NOTE: why not use source.FindCurrentEntityType(entity.GetType(), definingNavigationName, definingEntityType)?
-            var model = source.Model.FindEntityType(entity.GetType());
-            if (model != null)
-            {
-                IEnumerable<ISkipNavigation> skipNavigations = model.GetSkipNavigations();
-
+                IEnumerable<IReadOnlySkipNavigation> skipNavigations = entityType.GetSkipNavigations();
                 foreach (var navigation in skipNavigations)
                 {
                     ResetSkipNavigationProperty(source, entity, references, clonedEntity, navigation);
@@ -261,21 +254,21 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
         }
 
 
-        private static void ResetSkipNavigationProperty<TNavigation>(DbContext source, object entity, Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
-            where TNavigation : ISkipNavigation
+        private static void ResetSkipNavigationProperty<TNavigation>(DbContext source, object entity,
+            Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
+            where TNavigation : IReadOnlySkipNavigation
         {
             var navigationValue = navigation.PropertyInfo?.GetValue(entity);
-
-            if (navigation.IsOnDependent && navigationValue != null)
-            {
-                foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
-                {
-                    ResetProperty(foreignKeyProperty, clonedEntity);
-                }
-            }
-
             if (navigationValue != null)
             {
+                if (navigation.ForeignKey != null && navigation.IsOnDependent)
+                {
+                    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+                    {
+                        ResetProperty(foreignKeyProperty, clonedEntity);
+                    }
+                }
+
                 if (navigation.IsCollection)
                 {
                     //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);

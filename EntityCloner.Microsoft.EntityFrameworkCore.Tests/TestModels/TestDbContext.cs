@@ -17,6 +17,13 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Blog>();
+            modelBuilder.Entity<BlogAssets>();
+            modelBuilder.Entity<Post>();
+            modelBuilder.Entity<Tag>();
+            modelBuilder.Entity<TagHeader>();
+            modelBuilder.Entity<TagIpAddress>();
+
             modelBuilder.Entity<Customer>().HasKey(x => x.Id);
             modelBuilder.Entity<Customer>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<Customer>().Property(x => x.RowVersion).IsRowVersion();
