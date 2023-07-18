@@ -191,6 +191,24 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             Assert.Single((IEnumerable)cloneList);
         }
 
+
+
+        [Fact]
+        public async Task Customer_HashSet()
+        {
+            // Arrange
+            var entities = await TestDbContext.Set<Customer>()
+                .Where(c => c.Id == _customer.Id)
+                .AsNoTracking()
+                .ToArrayAsync();
+
+            // Act
+            var cloneList = await TestDbContext.CloneAsync(new HashSet<Customer>(entities));
+
+            // Assert
+            Assert.Single((IEnumerable)cloneList);
+        }
+
         [Fact]
         public async Task Customer_IList()
         {

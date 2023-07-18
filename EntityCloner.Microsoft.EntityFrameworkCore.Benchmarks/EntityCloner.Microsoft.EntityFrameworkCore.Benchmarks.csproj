@@ -1,18 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-	<OutputType>Exe</OutputType>
-	<TargetFramework>net7.0</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFrameworks>net7.0;net6.0;</TargetFrameworks>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
-	<PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.0" />
-	<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="7.0.0" />
-  </ItemGroup>
+	<ItemGroup Condition="('$(TargetFramework)' == 'net6.0')">
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[6,)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="[6,)" />
+	</ItemGroup>
+	<PropertyGroup Condition="('$(TargetFramework)' == 'net6.0')">
+		<DefineConstants>NET6_0</DefineConstants>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\EntityCloner.Microsoft.EntityFrameworkCore\EntityCloner.Microsoft.EntityFrameworkCore.csproj" />
-  </ItemGroup>
+	<ItemGroup Condition="('$(TargetFramework)' == 'net7.0')">
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[7,)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="[7,)" />
+	</ItemGroup>
+	<PropertyGroup Condition="('$(TargetFramework)' == 'net7.0')">
+		<DefineConstants>NET7_0</DefineConstants>
+	</PropertyGroup>
+
+	<!--<ItemGroup Condition="('$(TargetFramework)' == 'net8.0')">
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8,)"/>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="[8,)"/>
+	</ItemGroup>
+	<PropertyGroup Condition="('$(TargetFramework)' == 'net8.0')">
+		<DefineConstants>NET8_0</DefineConstants>
+	</PropertyGroup>-->
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" Version="0.13.6" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\EntityCloner.Microsoft.EntityFrameworkCore\EntityCloner.Microsoft.EntityFrameworkCore.csproj" />
+	</ItemGroup>
 
 </Project>

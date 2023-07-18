@@ -10,7 +10,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestBase
         protected IServiceProvider ServiceProvider;
         protected TestDbContext TestDbContext;
 
-        public DbContextTestBase(string testName)
+        protected DbContextTestBase(string testName)
         {
             var serviceCollection = new ServiceCollection();
 

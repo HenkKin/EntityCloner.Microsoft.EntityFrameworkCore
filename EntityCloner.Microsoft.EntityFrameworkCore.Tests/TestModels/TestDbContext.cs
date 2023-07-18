@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using EntityCloner.Microsoft.EntityFrameworkCore.Tests.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 {
@@ -65,6 +66,16 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
             modelBuilder.Entity<ArticleTranslation>().Property(x => x.LocaleId).ValueGeneratedOnAdd();
 
             base.OnModelCreating(modelBuilder);
+
+            // These entities are dynamically added below
+            //modelBuilder.Entity<Blog>();
+            //modelBuilder.Entity<BlogAssets>();
+            //modelBuilder.Entity<Post>();
+            //modelBuilder.Entity<Tag>();
+            //modelBuilder.Entity<TagHeader>();
+            //modelBuilder.Entity<TagIpAddress>();
+            var entitiesAssembly = typeof(IEntity).Assembly;
+            modelBuilder.RegisterAllEntities<IEntity>(entitiesAssembly);
         }
     }
 }
