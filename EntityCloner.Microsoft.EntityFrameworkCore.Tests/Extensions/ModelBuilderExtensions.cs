@@ -4,15 +4,17 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 
-namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.Extensions;
-
-public static class ModelBuilderExtensions
+namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.Extensions
 {
-    public static void RegisterAllEntities<TEntity>(this ModelBuilder modelBuilder, params Assembly[] assemblies)
+    public static class ModelBuilderExtensions
     {
-        IEnumerable<Type> types = assemblies.SelectMany(a => a.GetExportedTypes()).Where(c => c.IsClass && !c.IsAbstract && c.IsPublic &&
-            typeof(TEntity).IsAssignableFrom(c));
-        foreach (Type type in types)
-            modelBuilder.Entity(type);
+        public static void RegisterAllEntities<TEntity>(this ModelBuilder modelBuilder, params Assembly[] assemblies)
+        {
+            IEnumerable<Type> types = assemblies.SelectMany(a => a.GetExportedTypes()).Where(c => c.IsClass &&
+                !c.IsAbstract && c.IsPublic &&
+                typeof(TEntity).IsAssignableFrom(c));
+            foreach (Type type in types)
+                modelBuilder.Entity(type);
+        }
     }
 }
