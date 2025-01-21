@@ -140,6 +140,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
             // Assert
             Assert.Equal(2, cloneList.Length);
+            Assert.Equal(entities.ElementAt(0).Quantity, cloneList.ElementAt(0).Quantity);
+            Assert.Equal(entities.ElementAt(1).Quantity, cloneList.ElementAt(1).Quantity);
         }
 
         [Fact]
