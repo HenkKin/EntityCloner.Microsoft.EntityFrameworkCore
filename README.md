@@ -10,7 +10,7 @@ EntityCloner.Microsoft.EntityFrameworkCore
 
 Cloning entities using EntityFrameworkCore configuration.
 
-This library is Cross-platform, supporting `net6.0`, `net7.0` and `net8.0`.
+This library is Cross-platform, supporting `net6.0`, `net7.0`, `net8.0` and `net9.0`.
 
 
 ### Installing EntityCloner.Microsoft.EntityFrameworkCore
