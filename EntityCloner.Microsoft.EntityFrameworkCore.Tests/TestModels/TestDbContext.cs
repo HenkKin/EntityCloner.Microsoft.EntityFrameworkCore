@@ -1,5 +1,7 @@
-﻿using EntityCloner.Microsoft.EntityFrameworkCore.Tests.Extensions;
+﻿using System;
+using EntityCloner.Microsoft.EntityFrameworkCore.Tests.Extensions;
 using Microsoft.EntityFrameworkCore;
+using static EntityCloner.Microsoft.EntityFrameworkCore.Tests.CloneEnumerableOrderingIntegrationTests;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 {
@@ -11,6 +13,9 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
         public DbSet<Article> Articles { get; set; }
         public DbSet<ArticleTranslation> ArticleTranslations { get; set; }
 
+        public DbSet<Process> Processes { get; set; }
+        public DbSet<Shape> Shapes { get; set; }
+
         public TestDbContext(DbContextOptions options)
             : base(options)
         {
@@ -18,6 +23,31 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            //modelBuilder.Entity<Element>(entity =>
+            //{
+            //    entity.HasKey(e => e.Id);
+            //    entity.Property(x => x.Id).ValueGeneratedOnAdd();
+            //    entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+            //});
+
+            modelBuilder.Entity<Shape>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(x => x.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.HasMany(s => s.Predecessors);
+            });
+
+            modelBuilder.Entity<Process>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(x => x.Id).ValueGeneratedOnAdd();
+                entity.Property(e => e.Title).IsRequired().HasMaxLength(100);
+                entity.HasMany(p => p.Shapes);
+            });
+
+
+
             modelBuilder.Entity<Customer>().HasKey(x => x.Id);
             modelBuilder.Entity<Customer>().Property(x => x.Id).ValueGeneratedOnAdd();
             modelBuilder.Entity<Customer>().Property(x => x.RowVersion).IsRowVersion();

@@ -1,4 +1,6 @@
-﻿namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
+﻿using System.Collections.Generic;
+
+namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 {
     public class ArticleTranslation
     {
