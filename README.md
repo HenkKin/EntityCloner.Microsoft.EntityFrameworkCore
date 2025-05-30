@@ -30,6 +30,15 @@ Either commands, from Package Manager Console or .NET Core CLI, will download an
 - [Microsoft.EntityFrameworkCore](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore/)
 - [Microsoft.SourceLink.GitHub](https://www.nuget.org/packages/Microsoft.SourceLink.GitHub/)
 
+### Sponsors
+
+[Dapper Plus](https://dapper-plus.net/) and [Entity Framework Extensions](https://entityframework-extensions.net/) are major sponsors and proud to contribute to the development of EntityCloner.Microsoft.EntityFrameworkCore.
+
+[![Dapper Plus](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/dapper-plus-sponsor.png)](https://dapper-plus.net/bulk-insert)
+
+[![Entity Framework Extensions](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/entity-framework-extensions-sponsor.png)](https://entityframework-extensions.net/bulk-insert)
+
+
 ### Usage
 
 This package provides two extension methods for `DbContext`:
