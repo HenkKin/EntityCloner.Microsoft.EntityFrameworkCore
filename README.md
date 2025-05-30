@@ -27,14 +27,14 @@ Either commands, from Package Manager Console or .NET Core CLI, will download an
 
 ## Documentation
 
-The documentation is available at **[Learn Entity Framework Core](https://www.learnentityframeworkcore.com/extensions/entitycloner-microsoft-entityframeworkcore)**.
+The documentation is available at **[Learn Entity Framework Core](https://www.learnentityframeworkcore.com/extensions/entitycloner-microsoft-entityframeworkcore?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore)**.
 
 ## Sponsors
 
-[Dapper Plus](https://dapper-plus.net/) and [Entity Framework Extensions](https://entityframework-extensions.net/) are major sponsors and proud to contribute to the development of EntityCloner.Microsoft.EntityFrameworkCore.
+[Dapper Plus](https://dapper-plus.net/?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore) and [Entity Framework Extensions](https://entityframework-extensions.net/?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore) are major sponsors and proud to contribute to the development of EntityCloner.Microsoft.EntityFrameworkCore.
 
-[![Dapper Plus](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/dapper-plus-sponsor.png)](https://dapper-plus.net/bulk-insert)
+[![Dapper Plus](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/dapper-plus-sponsor.png)](https://dapper-plus.net/bulk-insert?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore)
 
-[![Entity Framework Extensions](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/entity-framework-extensions-sponsor.png)](https://entityframework-extensions.net/bulk-insert)
+[![Entity Framework Extensions](https://raw.githubusercontent.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore/master/entity-framework-extensions-sponsor.png)](https://entityframework-extensions.net/bulk-insert?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore)
 
 
