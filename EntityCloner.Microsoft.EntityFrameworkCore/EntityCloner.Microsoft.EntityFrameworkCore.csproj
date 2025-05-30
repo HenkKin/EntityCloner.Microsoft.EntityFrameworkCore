@@ -6,7 +6,7 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-		<PackageProjectUrl>https://www.learnentityframeworkcore.com/extensions/entitycloner-microsoft-entityframeworkcore</PackageProjectUrl>
+		<PackageProjectUrl>https://www.learnentityframeworkcore.com/extensions/entitycloner-microsoft-entityframeworkcore?utm_source=HenkKin&utm_medium=EntityCloner.Microsoft.EntityFrameworkCore</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/HenkKin/EntityCloner.Microsoft.EntityFrameworkCore.git</RepositoryUrl>
 		<RepositoryType>GitHub</RepositoryType>
 		<PackageTags>Clone DeepClone Entity Entities Include ThenInclude Core EntityFramework EF</PackageTags>
