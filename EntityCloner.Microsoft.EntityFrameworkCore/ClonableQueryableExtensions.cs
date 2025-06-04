@@ -13,29 +13,33 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
         public static IClonableQueryable<TEntity> Include<TEntity>(
             this IClonableQueryable<TEntity> source,
             [NotParameterized] string navigationPropertyPath)
+            //params Expression<Func<object, object>>[] excludeProperties)
             where TEntity : class
         {
-            return new ClonableQueryable<TEntity>(((ClonableQueryable<TEntity>)source).Queryable.Include(navigationPropertyPath));
+            return new ClonableQueryable<TEntity>(source, navigationPropertyPath, ((ClonableQueryable<TEntity>)source).Queryable.Include(navigationPropertyPath));
         }
 
         public static IIncludableClonableQueryable<TEntity, TProperty> Include<TEntity, TProperty>(
             this IClonableQueryable<TEntity> source,
-            Expression<Func<TEntity, TProperty>> navigationPropertyPath)
+            Expression<Func<TEntity, TProperty>> navigationPropertyPath,
+            params Expression<Func<TProperty, object>>[] excludeProperties)
             where TEntity : class
         {
-            return new IncludableClonableQueryable<TEntity, TProperty>(((ClonableQueryable<TEntity>)source).Queryable.Include(navigationPropertyPath));
+            return new IncludableClonableQueryable<TEntity, TProperty>(source, navigationPropertyPath.Body.ToString(), ((ClonableQueryable<TEntity>)source).Queryable.Include(navigationPropertyPath), excludeProperties);
         }
 
         public static IIncludableClonableQueryable<TEntity, TProperty> ThenInclude<TEntity, TPreviousProperty, TProperty>(
             this IIncludableClonableQueryable<TEntity, TPreviousProperty> source,
-            Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath) where TEntity : class
+            Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath,
+            params Expression<Func<TProperty, object>>[] excludeProperties) where TEntity : class
         {
-            return new IncludableClonableQueryable<TEntity, TProperty>(((IncludableClonableQueryable<TEntity, TPreviousProperty>)source).IncludableQueryable.ThenInclude(navigationPropertyPath));
+            return new IncludableClonableQueryable<TEntity, TProperty>(source, navigationPropertyPath.Body.ToString(), ((IncludableClonableQueryable<TEntity, TPreviousProperty>)source).IncludableQueryable.ThenInclude(navigationPropertyPath), excludeProperties);
         }
 
         public static IIncludableClonableQueryable<TEntity, TProperty> ThenInclude<TEntity, TPreviousProperty, TProperty>(
             this IIncludableClonableQueryable<TEntity, IEnumerable<TPreviousProperty>> source,
-            Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath) where TEntity : class
+            Expression<Func<TPreviousProperty, TProperty>> navigationPropertyPath,
+            params Expression<Func<TProperty, object>>[] excludeProperties) where TEntity : class
         {
             var propertyName = nameof(IncludableClonableQueryable<TEntity, IEnumerable<TPreviousProperty>>.IncludableQueryable);
             var property = source.GetType().GetProperty(propertyName);
@@ -53,7 +57,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     typeof(IEnumerable<>));
 
             var newIncludableQueryable = (thenIncludeMethod.MakeGenericMethod(typeof(TEntity), typeof(TPreviousProperty), typeof(TProperty)).Invoke(null, new [] { propertyValue, navigationPropertyPath }));
-            return new IncludableClonableQueryable<TEntity, TProperty>((IIncludableQueryable<TEntity, TProperty>)newIncludableQueryable);
+            return new IncludableClonableQueryable<TEntity, TProperty>(source, navigationPropertyPath.Body.ToString(), (IIncludableQueryable<TEntity, TProperty>)newIncludableQueryable, excludeProperties);
         }
     }
 }
