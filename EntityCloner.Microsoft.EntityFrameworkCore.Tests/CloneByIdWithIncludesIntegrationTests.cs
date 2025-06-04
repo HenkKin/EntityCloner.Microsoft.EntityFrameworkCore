@@ -275,5 +275,36 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             Assert.Equal("Artikel 2 nl-NL", orderLine2Article1ArticleTranslations2.Description);
             Assert.Equal(0, orderLine2Article1ArticleTranslations2.ArticleId);
         }
+
+
+        [Fact]
+        public async Task Customer_IncludeEntityWithCompositeKeyAndIgnorePartOfCompositeKey()
+        {
+            // Act
+            int articleId = 1;
+            var clone = await TestDbContext.CloneAsync<Article>(x => x
+                    .Include(c => c.ArticleTranslations, c=> c.Select(x => x.LocaleId))
+                , articleId);
+
+            // Assert
+
+            // Article
+            Assert.Equal(0, clone.Id);
+            Assert.Equal(2, clone.ArticleTranslations.Count);
+            Assert.Empty(clone.OrderLines);
+
+
+            // ArticleTranslations1
+            var orderLine1Article1ArticleTranslations1 = clone.ArticleTranslations.First();
+            Assert.Null(orderLine1Article1ArticleTranslations1.LocaleId); // is part of PrimaryKey
+            Assert.Equal("Artikel 1 en-GB", orderLine1Article1ArticleTranslations1.Description);
+            Assert.Equal(0, orderLine1Article1ArticleTranslations1.ArticleId);
+
+            // ArticleTranslations2
+            var orderLine1Article1ArticleTranslations2 = clone.ArticleTranslations.Last();
+            Assert.Null(orderLine1Article1ArticleTranslations2.LocaleId);// is part of PrimaryKey
+            Assert.Equal("Artikel 1 nl-NL", orderLine1Article1ArticleTranslations2.Description);
+            Assert.Equal(0, orderLine1Article1ArticleTranslations2.ArticleId);
+        }
     }
 }
