@@ -333,7 +333,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static void ResetProperty(IReadOnlyProperty property, object entity)
         {
-            if (property.PropertyInfo == null)
+            // Skip if property has [SkipReset] attribute
+            if (property.PropertyInfo == null || property.PropertyInfo?.GetCustomAttribute(typeof(SkipResetAttribute), true) != null)
             {
                 return;
             }
