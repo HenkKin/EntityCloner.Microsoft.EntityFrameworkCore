@@ -311,7 +311,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     ResetProperty(property, clonedEntity);
                 }
 
-                if (property.IsPrimaryKey() && property.FindContainingPrimaryKey().Properties.Count == 1)
+                if (property.IsPrimaryKey())
                 {
                     ResetProperty(property, clonedEntity);
                 }
