@@ -283,7 +283,25 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             // Act
             int articleId = 1;
             var clone = await TestDbContext.CloneAsync<Article>(x => x
-                    .Include(c => c.ArticleTranslations, c=> c.Select(x => x.LocaleId))
+                    //.Include(c => c.ArticleTranslations, c => c.Select(x => x.LocaleId)).Skip(x => x.Select(x => x.LocaleId)).Skip(x => x.Select(x => x.)).ThenInclude()
+                    .IncludeSkip(c => c.ArticleTranslations, x => x
+                        .SkipProperty(a => a.Select(x => x.LocaleId))
+                        .SkipProperty(a => a.Select(x => x.ArticleId)))
+                    // .SkipProperty(x => x.Select(x => x.LocaleId))
+                    // .SkipProperty(x => x.Select(x => x.ArticleId))
+                    //.ThenIncludeSkip(x => x.Article, x => x.SkipProperty(s => s.Id).SkipProperty(s => s.Id))
+                , articleId);
+
+            var clone2 = await TestDbContext.CloneAsync<Article>(x => x
+                    .Include(c => c.ArticleTranslations)
+                     .SkipProperty(x => x.Select(x => x.LocaleId))
+                     .SkipProperty(x => x.Select(x => x.ArticleId))
+                    //.ThenInclude(x => x.Article)
+                , articleId);
+
+            var clone3 = await TestDbContext.CloneAsync<Article>(x => x
+                    .Include(c => c.ArticleTranslations, x => x.Select(a => a.LocaleId), x => x.Select(a => a.ArticleId))
+                    //.ThenInclude(x => x.Article)
                 , articleId);
 
             // Assert

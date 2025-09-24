@@ -4,4 +4,8 @@
     public interface IIncludableClonableQueryable<out TEntity, out TProperty> : IClonableQueryable<TEntity>
     {
     }
+
+    public interface IPropertySkippableQueryable<out TEntity, out TProperty> : IIncludableClonableQueryable<TEntity, TProperty>
+    {
+    }
 }

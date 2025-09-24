@@ -12,7 +12,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Internal
         {
             IncludableQueryable = includableQueryable;
             ExcludeProperties = excludeProperties;
-            ExcludedProperties.Select(x=>x.Value)
+           // TODO ExcludedProperties.Select(x => x.Value)
         }
 
         public IIncludableQueryable<TEntity, TProperty> IncludableQueryable { get; }
