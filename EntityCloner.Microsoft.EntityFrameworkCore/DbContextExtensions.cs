@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Newtonsoft.Json;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore
 {
@@ -173,15 +174,17 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 return references[entity];
             }
 
-            var jsonSettings = new JsonSerializerSettings
+            JsonSerializerOptions jsonSerializerOptions = new()
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.All,
-                TypeNameHandling = TypeNameHandling.Auto,
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
+                ReferenceHandler = ReferenceHandler.Preserve,
+                WriteIndented = true
             };
 
-            string jsonString = JsonConvert.SerializeObject(entity, jsonSettings);
-            object clonedEntity = JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
+            // Automatisch alle polymorfe converters registreren
+            PolymorphicConverterRegistrar.RegisterPolymorphicConverters(jsonSerializerOptions, new[] { entity.GetType().Assembly });
+
+            string jsonString = JsonSerializer.Serialize(entity, jsonSerializerOptions);
+            object clonedEntity = JsonSerializer.Deserialize(jsonString, entity.GetType(), jsonSerializerOptions);
 
             references.Add(entity, clonedEntity);
             // source.CloneOwnedEntityProperties(entity, definingNavigationName, definingEntityType, references, clonedEntity);
@@ -349,6 +352,80 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 return Activator.CreateInstance(type);
             }
             return null;
+        }
+    }
+
+    public static class PolymorphicConverterRegistrar
+    {
+        public static void RegisterPolymorphicConverters(JsonSerializerOptions options, Assembly[] assemblies)
+        {
+            var allTypes = assemblies.SelectMany(a =>
+            {
+                try { return a.GetTypes(); }
+                catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t != null)!; }
+            }).ToList();
+
+            var abstractBases = allTypes
+                .Where(t => (t.IsAbstract || t.IsInterface) && !t.IsGenericType)
+                .Where(baseType => allTypes.Any(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface))
+                .Distinct();
+
+            foreach (var baseType in abstractBases)
+            {
+                var converterType = typeof(PolymorphicJsonConverter<>).MakeGenericType(baseType);
+                var converterInstance = Activator.CreateInstance(converterType);
+
+                if (converterInstance is JsonConverter converter)
+                {
+                    options.Converters.Add(converter);
+                }
+            }
+        }
+    }
+
+    public class PolymorphicJsonConverter<TBase> : JsonConverter<TBase>
+    {
+        private readonly Dictionary<string, Type> _typeMapping;
+
+        public PolymorphicJsonConverter()
+        {
+            var baseType = typeof(TBase);
+            var derivedTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a =>
+                {
+                    try { return a.GetTypes(); }
+                    catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t != null)!; }
+                })
+                .Where(t => baseType.IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+                .ToDictionary(t => t.Name, t => t);
+
+            _typeMapping = derivedTypes;
+        }
+
+        public override TBase? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            using var doc = JsonDocument.ParseValue(ref reader);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("Type", out var typeProp) || !root.TryGetProperty("Value", out var valueProp))
+                throw new JsonException("Missing 'Type' or 'Value' property.");
+
+            var typeName = typeProp.GetString();
+            if (typeName == null || !_typeMapping.TryGetValue(typeName, out var targetType))
+                throw new JsonException($"Unknown type '{typeName}'.");
+
+            return (TBase?)JsonSerializer.Deserialize(valueProp.GetRawText(), targetType, options);
+        }
+
+        public override void Write(Utf8JsonWriter writer, TBase value, JsonSerializerOptions options)
+        {
+            var typeName = value.GetType().Name;
+
+            writer.WriteStartObject();
+            writer.WriteString("Type", typeName);
+            writer.WritePropertyName("Value");
+            JsonSerializer.Serialize(writer, value, value.GetType(), options);
+            writer.WriteEndObject();
         }
     }
 }
