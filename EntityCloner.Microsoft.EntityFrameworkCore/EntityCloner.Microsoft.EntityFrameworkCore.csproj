@@ -12,7 +12,7 @@
 		<PackageTags>Clone DeepClone Entity Entities Include ThenInclude Core EntityFramework EF</PackageTags>
 		<Description>Cloning entities using EntityFrameworkCore configuration</Description>
 		<Copyright>Henk Kin</Copyright>
-		<Version>9.0.1</Version>
+		<Version>9.1.0</Version>
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 		<IncludeSymbols>true</IncludeSymbols>
@@ -57,5 +57,6 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	</ItemGroup>
 </Project>

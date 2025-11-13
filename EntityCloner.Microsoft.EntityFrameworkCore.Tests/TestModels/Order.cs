@@ -18,5 +18,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
         public string Description { get; set; }
         public Money TotalOrderPrice { get; set; }
         public ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
+        public int? PaymentId { get; set; }
+        public Payment Payment { get; set; }
     }
 }

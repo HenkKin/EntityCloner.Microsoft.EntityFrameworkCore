@@ -4,12 +4,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json.Serialization;
-using System.Text.Json;
 using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Newtonsoft.Json;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore
 {
@@ -174,14 +173,16 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 return references[entity];
             }
 
-            JsonSerializerOptions jsonSerializerOptions = new()
+            var jsonSettings = new JsonSerializerSettings
             {
-                ReferenceHandler = ReferenceHandler.Preserve,
-                WriteIndented = true
+                PreserveReferencesHandling = PreserveReferencesHandling.All,
+                TypeNameHandling = TypeNameHandling.Auto,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
             };
-            string jsonString = JsonSerializer.Serialize(entity, jsonSerializerOptions);
-            object clonedEntity = JsonSerializer.Deserialize(jsonString, entity.GetType(), jsonSerializerOptions);
-            
+
+            string jsonString = JsonConvert.SerializeObject(entity, jsonSettings);
+            object clonedEntity = JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
+
             references.Add(entity, clonedEntity);
             // source.CloneOwnedEntityProperties(entity, definingNavigationName, definingEntityType, references, clonedEntity);
 
