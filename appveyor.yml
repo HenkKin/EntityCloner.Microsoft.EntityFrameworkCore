@@ -1,8 +1,19 @@
-version: 9.0.{build}
+version: 10.0.{build}
 image:
 - Visual Studio 2022
 
+init:
+- ps: dotnet --list-sdks
+
+install:
+- ps: |
+    $sdkVersion = "10.0.100"
+    if (-not (dotnet --list-sdks | Select-String $sdkVersion)) {
+        choco install dotnet-sdk --version=$sdkVersion -y
+    }
+
 build_script:
-- cmd: dotnet build
+- cmd: dotnet build --configuration Release
+
 test_script:
-- cmd: dotnet test
+- cmd: dotnet test --configuration Release
