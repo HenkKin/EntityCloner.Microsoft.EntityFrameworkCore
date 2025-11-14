@@ -2,15 +2,12 @@ version: 10.0.{build}
 image:
 - Visual Studio 2022
 
-init:
-- ps: dotnet --list-sdks
-
 install:
 - ps: |
-    $sdkVersion = "10.0.100"
-    if (-not (dotnet --list-sdks | Select-String $sdkVersion)) {
-        choco install dotnet-sdk --version=$sdkVersion -y
-    }
+    Invoke-WebRequest -Uri 'https://dot.net/v1/dotnet-install.ps1' -UseBasicParsing -OutFile "$env:temp\dotnet-install.ps1"
+    & $env:temp\dotnet-install.ps1 -Architecture x64 -Version '10.0.100' -InstallDir "$env:ProgramFiles\dotnet"
+before_build:
+  - cmd: dotnet --version
 
 build_script:
 - cmd: dotnet build --configuration Release
