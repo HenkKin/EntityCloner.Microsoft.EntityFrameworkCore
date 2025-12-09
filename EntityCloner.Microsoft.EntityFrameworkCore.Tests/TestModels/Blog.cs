@@ -11,5 +11,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests.TestModels
 
         public ICollection<Post> Posts { get; set; } = new List<Post>(); // Collection navigation
         public BlogAssets Assets { get; set; } // Reference navigation
+        public int? FirstTagId { get; set; }
+        public Tag FirstTag { get; set; }
     }
 }

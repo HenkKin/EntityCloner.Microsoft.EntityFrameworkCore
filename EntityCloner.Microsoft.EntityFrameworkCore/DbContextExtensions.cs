@@ -111,6 +111,47 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             return Activator.CreateInstance(collectionType, collectionValue);
         }
 
+        private static object CreatePrimaryKeyStringOrInstance(this DbContext source, object entity)
+        {
+            var entityType = source.FindCurrentEntityType(entity.GetType(), null, null);
+            var primaryKeyProperties = entityType?.FindPrimaryKey()?.Properties.Select(p => p.PropertyInfo).ToList();
+            if (primaryKeyProperties == null)
+            {
+                // no primary key, then use instance as key.
+                return entity;
+            }
+
+            string primaryKeyString = null;
+            var jsonSettings = new JsonSerializerSettings
+            {
+                PreserveReferencesHandling = PreserveReferencesHandling.All,
+                TypeNameHandling = TypeNameHandling.Auto,
+                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+            };
+
+            for (int i = 0; i < primaryKeyProperties.Count; i++)
+            {
+                var primaryKeyProperty = primaryKeyProperties[i];
+                var idPart = primaryKeyProperty.GetValue(entity);
+
+                if (idPart?.GetType() != primaryKeyProperty.PropertyType)
+                {
+                    throw new NotSupportedException(
+                        $"CreatePrimaryKeyString only can handle id of type '{primaryKeyProperty.PropertyType.FullName}', passed id of type '{idPart?.GetType().FullName}'");
+                }
+
+                string separator = "";
+                if (!string.IsNullOrWhiteSpace(primaryKeyString))
+                {
+                    separator = "-";
+                }
+                string idPartString = JsonConvert.SerializeObject(idPart, jsonSettings);
+                primaryKeyString = primaryKeyString + separator + idPartString;
+            }
+
+            return entityType.Name + "-" + primaryKeyString;
+        }
+
         private static Expression<Func<TEntity, bool>> CreatePrimaryKeyExpression<TEntity>(object[] primaryKey, List<PropertyInfo> primaryKeyProperties)
             where TEntity : class
         {
@@ -168,10 +209,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static object InternalClone(this DbContext source, object entity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references)
         {
-            if (references.ContainsKey(entity))
-            {
-                return references[entity];
-            }
+            var primaryKeyOrInstance = source.CreatePrimaryKeyStringOrInstance(entity);
+            var isExistingEntity = references.ContainsKey(primaryKeyOrInstance);
 
             var jsonSettings = new JsonSerializerSettings
             {
@@ -183,7 +222,15 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             string jsonString = JsonConvert.SerializeObject(entity, jsonSettings);
             object clonedEntity = JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
 
-            references.Add(entity, clonedEntity);
+            if (isExistingEntity)
+            {
+                source.MergeNavigationProperties(references[primaryKeyOrInstance], definingNavigationName, definingEntityType, references, clonedEntity);
+                return references[primaryKeyOrInstance];
+            }
+            else
+            {
+                references.Add(primaryKeyOrInstance, clonedEntity);
+            }
             // source.CloneOwnedEntityProperties(entity, definingNavigationName, definingEntityType, references, clonedEntity);
 
             source.ResetEntityProperties(entity, definingNavigationName, definingEntityType, clonedEntity);
@@ -254,9 +301,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             }
         }
 
-
-        private static void ResetSkipNavigationProperty<TNavigation>(DbContext source, object entity,
-            Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
+        private static void ResetSkipNavigationProperty<TNavigation>(DbContext source, object entity, Dictionary<object, object> references, object clonedEntity, TNavigation navigation)
             where TNavigation : IReadOnlySkipNavigation
         {
             var navigationValue = navigation.PropertyInfo?.GetValue(entity);
@@ -282,6 +327,63 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
                     navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
                 }
+            }
+        }
+
+        private static void MergeNavigationProperties(this DbContext source, object toEntity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references, object fromEntity)
+        {
+            var entityType = source.FindCurrentEntityType(toEntity.GetType(), definingNavigationName, definingEntityType);
+            if (entityType != null)
+            {
+                foreach (var navigation in entityType.GetNavigations())
+                {
+                    MergeNavigationProperty(source, toEntity, references, fromEntity, navigation);
+                }
+
+                IEnumerable<IReadOnlySkipNavigation> skipNavigations = entityType.GetSkipNavigations();
+                foreach (var navigation in skipNavigations)
+                {
+                    MergeSkipNavigationProperty(source, toEntity, references, fromEntity, navigation);
+                }
+            }
+        }
+
+        private static void MergeNavigationProperty<TNavigation>(DbContext source, object toEntity, Dictionary<object, object> references, object fromEntity, TNavigation navigation)
+                where TNavigation : IReadOnlyNavigation
+        {
+            var toEntityNavigationValue = navigation.PropertyInfo?.GetValue(toEntity);
+
+            //if (navigation.IsOnDependent && toEntityNavigationValue == null)
+            //{
+            //    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+            //    {
+            //        MergeProperty(foreignKeyProperty, toEntity, fromEntity);
+            //    }
+            //}
+
+            if (toEntityNavigationValue == null)
+            {
+                var fromEntityNavigationValue = navigation.PropertyInfo?.GetValue(fromEntity);
+                navigation.PropertyInfo.SetValue(toEntity, fromEntityNavigationValue);
+            }
+        }
+
+        private static void MergeSkipNavigationProperty<TNavigation>(DbContext source, object toEntity, Dictionary<object, object> references, object fromEntity, TNavigation navigation)
+            where TNavigation : IReadOnlySkipNavigation
+        {
+            var toEntityNavigationValue = navigation.PropertyInfo?.GetValue(toEntity);
+            if (toEntityNavigationValue == null)
+            {
+                //if (navigation.ForeignKey != null && navigation.IsOnDependent)
+                //{
+                //    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+                //    {
+                //        MergeProperty(foreignKeyProperty, toEntity, fromEntity);
+                //    }
+                //}
+            
+                var fromEntityNavigationValue = navigation.PropertyInfo?.GetValue(fromEntity);
+                navigation.PropertyInfo.SetValue(toEntity, fromEntityNavigationValue);
             }
         }
 
@@ -340,6 +442,21 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             }
 
             property.PropertyInfo.SetValue(entity, property.IsNullable ? null : GetDefault(property.ClrType));
+        }
+
+        private static void MergeProperty(IReadOnlyProperty property, object entity, object clonedEntity)
+        {
+            if (property.PropertyInfo == null)
+            {
+                return;
+            }
+
+            var firstValue = property.PropertyInfo.GetValue(entity);
+            var secondValue = property.PropertyInfo.GetValue(clonedEntity);
+            if(firstValue == null)
+            {
+                property.PropertyInfo.SetValue(entity, secondValue);
+            }
         }
 
         private static object GetDefault(Type type)
