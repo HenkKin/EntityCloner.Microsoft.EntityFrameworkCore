@@ -90,8 +90,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         private static object InternalClone(this DbContext source, object entity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references)
         {
-            var primaryKeyOrInstance = source.CreatePrimaryKeyStringOrInstance(entity);
-            var isExistingEntity = references.ContainsKey(primaryKeyOrInstance);
+            var primaryKeyStringOrInstance = source.CreatePrimaryKeyStringOrInstance(entity);
+            var isEarlierClonedEntity = references.ContainsKey(primaryKeyStringOrInstance);
 
             var jsonSettings = new JsonSerializerSettings
             {
@@ -103,15 +103,17 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             string jsonString = JsonConvert.SerializeObject(entity, jsonSettings);
             object clonedEntity = JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
 
-            if (isExistingEntity)
+            if (isEarlierClonedEntity)
             {
-                source.MergeNavigationProperties(references[primaryKeyOrInstance], definingNavigationName, definingEntityType, references, clonedEntity);
-                return references[primaryKeyOrInstance];
+                var earlierClonedEntity = references[primaryKeyStringOrInstance];
+                source.MergeNavigationProperties(earlierClonedEntity, clonedEntity, definingNavigationName, definingEntityType);
+                return earlierClonedEntity;
             }
             else
             {
-                references.Add(primaryKeyOrInstance, clonedEntity);
+                references.Add(primaryKeyStringOrInstance, clonedEntity);
             }
+
             // source.CloneOwnedEntityProperties(entity, definingNavigationName, definingEntityType, references, clonedEntity);
 
             source.ResetEntityProperties(entity, definingNavigationName, definingEntityType, clonedEntity);
@@ -202,7 +204,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 {
                     separator = "-";
                 }
-                string idPartString = JsonConvert.SerializeObject(idPart, jsonSettings);
+
+                string idPartString = idPart.GetType() == typeof(string) ? idPart?.ToString() : JsonConvert.SerializeObject(idPart, jsonSettings);
                 primaryKeyString = primaryKeyString + separator + idPartString;
             }
 
@@ -302,8 +305,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     ResetNavigationProperty(source, entity, references, clonedEntity, navigation);
                 }
 
-                IEnumerable<IReadOnlySkipNavigation> skipNavigations = entityType.GetSkipNavigations();
-                foreach (var navigation in skipNavigations)
+                foreach (var navigation in entityType.GetSkipNavigations())
                 {
                     ResetSkipNavigationProperty(source, entity, references, clonedEntity, navigation);
                 }
@@ -314,26 +316,23 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             where TNavigation : IReadOnlyNavigation
         {
             var navigationValue = navigation.PropertyInfo?.GetValue(entity);
-
-            if (navigation.IsOnDependent && navigationValue != null)
-            {
-                foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
-                {
-                    ResetProperty(foreignKeyProperty, clonedEntity);
-                }
-            }
-
             if (navigationValue != null)
             {
+                if (navigation.IsOnDependent)
+                {
+                    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+                    {
+                        ResetProperty(foreignKeyProperty, clonedEntity);
+                    }
+                }
+           
                 if (navigation.IsCollection)
                 {
-                    //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);
                     var collection = source.InternalCloneCollection(references, navigation.ClrType.GenericTypeArguments[0], navigation.Name, navigation.DeclaringEntityType, (IEnumerable)navigationValue);
                     navigation.PropertyInfo.SetValue(clonedEntity, collection);
                 }
                 else
                 {
-                    //var clonedPropertyValue = source.InternalClone(navigationValue, navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, references);
                     var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
                     navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
                 }
@@ -356,13 +355,11 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
                 if (navigation.IsCollection)
                 {
-                    //var collection = source.InternalCloneCollection(references, entity, navigation.ClrType.GenericTypeArguments[0], navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, (IEnumerable)navigationValue);
                     var collection = source.InternalCloneCollection(references, navigation.ClrType.GenericTypeArguments[0], navigation.Name, navigation.DeclaringEntityType, (IEnumerable)navigationValue);
                     navigation.PropertyInfo.SetValue(clonedEntity, collection);
                 }
                 else
                 {
-                    //var clonedPropertyValue = source.InternalClone(navigationValue, navigation.ForeignKey.DeclaringEntityType.DefiningNavigationName, navigation.ForeignKey.DeclaringEntityType.DefiningEntityType, references);
                     var clonedPropertyValue = source.InternalClone(navigationValue, navigation.Name, navigation.DeclaringEntityType, references);
                     navigation.PropertyInfo.SetValue(clonedEntity, clonedPropertyValue);
                 }
@@ -408,45 +405,43 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
 
         #region Merge properties
 
-        private static void MergeNavigationProperties(this DbContext source, object toEntity, string definingNavigationName, IReadOnlyEntityType definingEntityType, Dictionary<object, object> references, object fromEntity)
+        private static void MergeNavigationProperties(this DbContext source, object toEntity, object fromEntity, string definingNavigationName, IReadOnlyEntityType definingEntityType)
         {
             var entityType = source.FindCurrentEntityType(toEntity.GetType(), definingNavigationName, definingEntityType);
             if (entityType != null)
             {
                 foreach (var navigation in entityType.GetNavigations())
                 {
-                    MergeNavigationProperty(source, toEntity, references, fromEntity, navigation);
+                    MergeNavigationProperty(source, toEntity, fromEntity, navigation);
                 }
 
-                IEnumerable<IReadOnlySkipNavigation> skipNavigations = entityType.GetSkipNavigations();
-                foreach (var navigation in skipNavigations)
+                foreach (var navigation in entityType.GetSkipNavigations())
                 {
-                    MergeSkipNavigationProperty(source, toEntity, references, fromEntity, navigation);
+                    MergeSkipNavigationProperty(source, toEntity, fromEntity, navigation);
                 }
             }
         }
 
-        private static void MergeNavigationProperty<TNavigation>(DbContext source, object toEntity, Dictionary<object, object> references, object fromEntity, TNavigation navigation)
+        private static void MergeNavigationProperty<TNavigation>(DbContext source, object toEntity, object fromEntity, TNavigation navigation)
                 where TNavigation : IReadOnlyNavigation
         {
             var toEntityNavigationValue = navigation.PropertyInfo?.GetValue(toEntity);
-
-            //if (navigation.IsOnDependent && toEntityNavigationValue == null)
-            //{
-            //    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
-            //    {
-            //        MergeProperty(foreignKeyProperty, toEntity, fromEntity);
-            //    }
-            //}
-
             if (toEntityNavigationValue == null)
             {
+                //if (navigation.IsOnDependent)
+                //{
+                //    foreach (var foreignKeyProperty in navigation.ForeignKey.Properties)
+                //    {
+                //        MergeProperty(foreignKeyProperty, toEntity, fromEntity);
+                //    }
+                //}
+
                 var fromEntityNavigationValue = navigation.PropertyInfo?.GetValue(fromEntity);
                 navigation.PropertyInfo.SetValue(toEntity, fromEntityNavigationValue);
             }
         }
 
-        private static void MergeSkipNavigationProperty<TNavigation>(DbContext source, object toEntity, Dictionary<object, object> references, object fromEntity, TNavigation navigation)
+        private static void MergeSkipNavigationProperty<TNavigation>(DbContext source, object toEntity, object fromEntity, TNavigation navigation)
             where TNavigation : IReadOnlySkipNavigation
         {
             var toEntityNavigationValue = navigation.PropertyInfo?.GetValue(toEntity);
@@ -465,20 +460,20 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             }
         }
 
-        private static void MergeProperty(IReadOnlyProperty property, object entity, object clonedEntity)
-        {
-            if (property.PropertyInfo == null)
-            {
-                return;
-            }
+        //private static void MergeProperty(IReadOnlyProperty property, object entity, object clonedEntity)
+        //{
+        //    if (property.PropertyInfo == null)
+        //    {
+        //        return;
+        //    }
 
-            var firstValue = property.PropertyInfo.GetValue(entity);
-            var secondValue = property.PropertyInfo.GetValue(clonedEntity);
-            if (firstValue == null)
-            {
-                property.PropertyInfo.SetValue(entity, secondValue);
-            }
-        }
+        //    var firstValue = property.PropertyInfo.GetValue(entity);
+        //    var secondValue = property.PropertyInfo.GetValue(clonedEntity);
+        //    if (firstValue == null)
+        //    {
+        //        property.PropertyInfo.SetValue(entity, secondValue);
+        //    }
+        //}
 
         #endregion
     }
