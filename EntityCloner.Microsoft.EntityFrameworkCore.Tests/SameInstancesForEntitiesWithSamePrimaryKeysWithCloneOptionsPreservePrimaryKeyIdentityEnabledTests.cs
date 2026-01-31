@@ -8,7 +8,7 @@ using Xunit;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 {
-    public class SameInstancesForEntitiesWithSamePrimaryKeysWithoutCloneOptionsTests : DbContextTestBase
+    public class SameInstancesForEntitiesWithSamePrimaryKeysWithCloneOptionsPreservePrimaryKeyIdentityEnabledTests : DbContextTestBase
     {
         private readonly Blog _blog;
         private readonly Post _post1;
@@ -19,7 +19,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         private readonly TagHeader _tagHeader1;
         private readonly TagHeader _tagHeader2;
 
-        public SameInstancesForEntitiesWithSamePrimaryKeysWithoutCloneOptionsTests() : base(nameof(SameInstancesForEntitiesWithSamePrimaryKeysWithoutCloneOptionsTests))
+        public SameInstancesForEntitiesWithSamePrimaryKeysWithCloneOptionsPreservePrimaryKeyIdentityEnabledTests() : base(nameof(SameInstancesForEntitiesWithSamePrimaryKeysWithCloneOptionsPreservePrimaryKeyIdentityEnabledTests))
         {
             _blog = new Blog
             {
@@ -94,8 +94,9 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             TestDbContext.Set<Blog>().Add(_blog);
             TestDbContext.SaveChanges();
         }
+
         [Fact]
-        public async Task Blog_CloneWithIncludeOnTagsAndFirstTagBothShouldHaveSameInstanceButAlsoTagHeaderAsDeepestIncludedEntityWithoutOptions()
+        public async Task Blog_CloneWithIncludeOnTagsAndFirstTagBothShouldHaveSameInstanceButAlsoTagHeaderAsDeepestIncludedEntity()
         {
             // Arrange
             var entity = await TestDbContext.Set<Blog>()
@@ -108,38 +109,16 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 .SingleAsync();
 
             // Act
-            var cloneBlog = await TestDbContext.CloneAsync(entity);
+            var cloneBlog = await TestDbContext.CloneAsync(entity, new CloneOptions { PreservePrimaryKeyIdentity = true });
 
             var cloneFirstTag = cloneBlog.FirstTag;
             var cloneTag = cloneBlog.Posts.First().Tags.First();
 
-            Assert.NotSame(cloneTag, cloneFirstTag);
+            Assert.Same(cloneTag, cloneFirstTag);
             Assert.NotNull(cloneTag.TagHeader);
-            Assert.Null(cloneFirstTag.TagHeader); // Should also have include TagHeader from other include
-        }
+            Assert.NotNull(cloneFirstTag.TagHeader); // Should also have include TagHeader from other include
+            Assert.Same(cloneTag.TagHeader, cloneFirstTag.TagHeader); // Both TagHeaders should be same instance
 
-        [Fact]
-        public async Task Blog_CloneWithIncludeOnTagsAndFirstTagBothShouldHaveSameInstanceButAlsoTagHeaderAsDeepestIncludedEntityWithOptionsPreservePrimaryKeyIdentityDisabled()
-        {
-            // Arrange
-            var entity = await TestDbContext.Set<Blog>()
-                .Include(b => b.FirstTag) //TagHeader not Included here
-                .Include(b => b.Posts)
-                .ThenInclude(b => b.Tags)
-                .ThenInclude(b => b.TagHeader)// Included here
-                .Where(c => c.Id == _blog.Id)
-                .AsNoTracking()
-                .SingleAsync();
-
-            // Act
-            var cloneBlog = await TestDbContext.CloneAsync(entity, new CloneOptions { PreservePrimaryKeyIdentity = false});
-
-            var cloneFirstTag = cloneBlog.FirstTag;
-            var cloneTag = cloneBlog.Posts.First().Tags.First();
-
-            Assert.NotSame(cloneTag, cloneFirstTag);
-            Assert.NotNull(cloneTag.TagHeader);
-            Assert.Null(cloneFirstTag.TagHeader); // Should also have include TagHeader from other include
         }
     }
 }
