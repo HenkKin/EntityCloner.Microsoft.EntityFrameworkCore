@@ -11,10 +11,6 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 {
     public class CloneRelationshipsTests : DbContextTestBase
     {
-        private readonly string _localeEnGb = "en-GB";
-        private readonly string _localeNlNL = "nl-NL";
-
-        private readonly Customer _customer;
         private readonly Blog _blog;
         private readonly BlogAssets _blogAssets;
         private readonly Post _post1;
@@ -39,8 +35,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             _blogAssets = new BlogAssets
             {
                 //Id = 2, 
-                Banner = Encoding.UTF8.GetBytes("Dit is een test"), 
-                BlogId = _blog.Id, 
+                Banner = Encoding.UTF8.GetBytes("Dit is een test"),
+                BlogId = _blog.Id,
                 Blog = _blog
             };
             _blog.Assets = _blogAssets;
@@ -79,8 +75,8 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 TagHeaderId = _tagHeader1.Id,
             };
 
-            
-            _tagIpAddress1 = new TagIpAddress { IpAddress = "IpAddress1", Tag = _tag1, TagId = _tag1.Id};
+
+            _tagIpAddress1 = new TagIpAddress { IpAddress = "IpAddress1", Tag = _tag1, TagId = _tag1.Id };
             _tagIpAddress2 = new TagIpAddress { IpAddress = "IpAddress2", Tag = _tag1, TagId = _tag1.Id };
             _tagIpAddress3 = new TagIpAddress { IpAddress = "IpAddress3", Tag = _tag2, TagId = _tag2.Id };
 
@@ -114,7 +110,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             _tag1.Posts.Add(_post2);
             _tag2.Posts.Add(_post1);
             _tag2.Posts.Add(_post2);
-            
+
             _blog.Posts.Add(_post1);
             _blog.Posts.Add(_post2);
 
@@ -124,11 +120,11 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         }
 
         [Fact]
-        public async Task Customer_CloneWithoutIncludes()
+        public async Task Blog_CloneWithoutIncludes()
         {
             // Arrange
             var entity = await TestDbContext.Set<Blog>()
-                .Where(c=>c.Id == _blog.Id)
+                .Where(c => c.Id == _blog.Id)
                 .AsNoTracking()
                 .SingleAsync();
 
@@ -145,11 +141,11 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
 
         [Fact]
-        public async Task Customer_CloneWithIncludeOfOptionalOneToManyReferenceRelation()
+        public async Task Blog_CloneWithIncludeOfOptionalOneToManyReferenceRelation()
         {
             // Arrange
             var entity = await TestDbContext.Set<Blog>()
-                .Include(b=>b.Posts)
+                .Include(b => b.Posts)
                 .Where(c => c.Id == _blog.Id)
                 .AsNoTracking()
                 .SingleAsync();
@@ -182,7 +178,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
 
 
         [Fact]
-        public async Task Customer_CloneWithIncludeOfManyToManyReferenceRelation()
+        public async Task Post_CloneWithIncludeOfManyToManyReferenceRelation()
         {
             // Arrange
             var entity = await TestDbContext.Set<Post>()
@@ -219,7 +215,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         }
 
         [Fact]
-        public async Task Customer_CloneWithIncludeOfManyToManyReferenceRelationWithChildForeignKeyReleation()
+        public async Task Post_CloneWithIncludeOfManyToManyReferenceRelationWithChildForeignKeyReleation()
         {
             // Arrange
             var entity = await TestDbContext.Set<Post>()
@@ -266,7 +262,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
         }
 
         [Fact]
-        public async Task Customer_CloneWithIncludeOfManyToManyReferenceRelationWithChildOneToManyReleation()
+        public async Task Post_CloneWithIncludeOfManyToManyReferenceRelationWithChildOneToManyReleation()
         {
             // Arrange
             var entity = await TestDbContext.Set<Post>()
@@ -326,193 +322,5 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             Assert.Equal(0, cloneTag3.TagIpAddresses.Count);
         }
 
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithIncludeForOwnsEntityAddress()
-        //{
-        //    // Arrange
-        //    var entity = await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Address)
-        //        .Where(c => c.Id == _customer.Id)
-        //        .AsNoTracking()
-        //        .SingleAsync();
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-        //    Assert.NotNull(clone.Address);
-        //}
-
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithoutOrderLines()
-        //{
-        //    // Act
-        //    var entity = await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Orders)
-        //        .Where(c => c.Id == _customer.Id)
-        //        .AsNoTracking()
-        //        .SingleAsync();
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-        //    Assert.Empty(clone.Orders.SelectMany(o => o.OrderLines));
-        //}
-
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithOrderLines()
-        //{
-        //    // Act
-        //    var entity= await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Orders)
-        //        .ThenInclude(c => c.OrderLines)
-        //        .Where(c => c.Id == _customer.Id).AsNoTracking()
-        //        .SingleAsync();
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-        //    Assert.Equal(2, clone.Orders.SelectMany(o => o.OrderLines).Count());
-        //}
-
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithoutArticleTranslations()
-        //{
-        //    // Act
-        //    var entity = await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Orders)
-        //        .ThenInclude(c => c.OrderLines)
-        //        .ThenInclude(c => c.Article)
-        //        .Where(c => c.Id == _customer.Id)
-        //        .AsNoTracking()
-        //        .SingleAsync(); 
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-        //    Assert.Empty(clone.Orders.SelectMany(o => o.OrderLines.SelectMany(ol => ol.Article.ArticleTranslations)));
-        //}
-
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithArticleTranslations()
-        //{
-        //    // Act
-        //    var entity = await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Orders)
-        //        .ThenInclude(c => c.OrderLines)
-        //        .ThenInclude(c => c.Article)
-        //        .ThenInclude(c => c.ArticleTranslations)
-        //        .Where(c => c.Id == _customer.Id)
-        //        .AsNoTracking()
-        //        .SingleAsync();
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-        //    Assert.Equal(4, clone.Orders.SelectMany(o => o.OrderLines.SelectMany(ol => ol.Article.ArticleTranslations)).Count());
-        //}
-
-        //[Fact]
-        //public async Task Customer_IncludeEntityWithAllPossibleIncludes()
-        //{
-        //    // Act
-        //    var entity = await TestDbContext.Set<Customer>()
-        //        .Include(c => c.Orders)
-        //        .ThenInclude(c => c.OrderLines)
-        //        .ThenInclude(c => c.Article)
-        //        .ThenInclude(c => c.ArticleTranslations)
-        //        .Include(c => c.Orders)
-        //        .Include(c => c.Address)
-        //        .Where(c => c.Id == _customer.Id)
-        //        .AsNoTracking()
-        //        .SingleAsync();
-
-        //    // Act
-        //    var clone = await TestDbContext.CloneAsync(entity);
-
-        //    // Assert
-        //    Assert.NotNull(clone);
-
-        //    // Customer
-        //    Assert.Equal(0, clone.Id);
-        //    Assert.Equal(_birthDate, clone.BirthDate);
-        //    Assert.NotNull(clone.Address);
-        //    Assert.Equal(25, clone.Address.HouseNumber);
-        //    Assert.Equal("Street", clone.Address.Street);
-        //    Assert.Equal(1, clone.Orders.Count);
-
-        //    // Order
-        //    var order = clone.Orders.Single();
-        //    Assert.Equal(0, clone.Id);
-        //    Assert.NotNull(order.Customer);
-        //    Assert.Equal(0, order.CustomerId);
-        //    Assert.Equal("Description", order.Description);
-        //    Assert.Equal(OrderStatus.Order, order.OrderStatus);
-        //    Assert.False(order.IsDeleted);
-        //    Assert.Equal(_offerDate, order.OfferDate);
-        //    Assert.Equal(_orderDate, order.OrderDate);
-        //    Assert.Equal(2, order.OrderLines.Count);
-
-        //    // OrderLine 1
-        //    var orderLine1 = order.OrderLines.First();
-
-        //    Assert.Equal(0, orderLine1.Id);
-        //    Assert.NotNull(orderLine1.Order);
-        //    Assert.Equal(0, orderLine1.OrderId);
-        //    Assert.NotNull(orderLine1.Article);
-        //    Assert.Equal(0, orderLine1.ArticleId);
-        //    Assert.Equal(1, orderLine1.Quantity);
-
-        //    // Article
-        //    Assert.Equal(0, orderLine1.Article.Id);
-        //    Assert.Equal(2, orderLine1.Article.ArticleTranslations.Count);
-
-        //    // ArticleTranslations1
-        //    var orderLine1Article1ArticleTranslations1 = orderLine1.Article.ArticleTranslations.First();
-        //    Assert.Null(orderLine1Article1ArticleTranslations1.LocaleId); // is part of PrimaryKey
-        //    Assert.Equal("Artikel 1 en-GB", orderLine1Article1ArticleTranslations1.Description);
-        //    Assert.Equal(0, orderLine1Article1ArticleTranslations1.ArticleId);
-
-        //    // ArticleTranslations2
-        //    var orderLine1Article1ArticleTranslations2 = orderLine1.Article.ArticleTranslations.Last();
-        //    Assert.Null(orderLine1Article1ArticleTranslations2.LocaleId);// is part of PrimaryKey
-        //    Assert.Equal("Artikel 1 nl-NL", orderLine1Article1ArticleTranslations2.Description);
-        //    Assert.Equal(0, orderLine1Article1ArticleTranslations2.ArticleId);
-
-        //    // OrderLine 2
-        //    var orderLine2 = order.OrderLines.Last();
-
-        //    Assert.Equal(0, orderLine2.Id);
-        //    Assert.NotNull(orderLine2.Order);
-        //    Assert.Equal(0, orderLine2.OrderId);
-        //    Assert.NotNull(orderLine2.Article);
-        //    Assert.Equal(0, orderLine2.ArticleId);
-        //    Assert.Equal(2, orderLine2.Quantity);
-
-        //    // Article
-        //    Assert.Equal(0, orderLine2.Article.Id);
-        //    Assert.Equal(2, orderLine2.Article.ArticleTranslations.Count);
-
-        //    // ArticleTranslations1
-        //    var orderLine2Article1ArticleTranslations1 = orderLine2.Article.ArticleTranslations.First();
-        //    Assert.Null(orderLine2Article1ArticleTranslations1.LocaleId);// is part of PrimaryKey
-        //    Assert.Equal("Artikel 2 en-GB", orderLine2Article1ArticleTranslations1.Description);
-        //    Assert.Equal(0, orderLine2Article1ArticleTranslations1.ArticleId);
-
-        //    // ArticleTranslations2
-        //    var orderLine2Article1ArticleTranslations2 = orderLine2.Article.ArticleTranslations.Last();
-        //    Assert.Null(orderLine2Article1ArticleTranslations2.LocaleId);// is part of PrimaryKey
-        //    Assert.Equal("Artikel 2 nl-NL", orderLine2Article1ArticleTranslations2.Description);
-        //    Assert.Equal(0, orderLine2Article1ArticleTranslations2.ArticleId);
-        //}
     }
 }
