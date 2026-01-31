@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace EntityCloner.Microsoft.EntityFrameworkCore
+﻿namespace EntityCloner.Microsoft.EntityFrameworkCore
 {
     public class CloneOptions
     {
