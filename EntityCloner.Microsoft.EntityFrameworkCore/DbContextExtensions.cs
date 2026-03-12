@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using EntityCloner.Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Newtonsoft.Json;
 
 namespace EntityCloner.Microsoft.EntityFrameworkCore
 {
@@ -110,17 +109,31 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 }
             }
 
-            var jsonSettings = new JsonSerializerSettings
+            object clonedEntity;
+
+            if(options.SerializationMethod == SerializationMethods.SystemTextJson)
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.All,
-                TypeNameHandling = TypeNameHandling.Auto,
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore
-            };
+                System.Text.Json.JsonSerializerOptions jsonSerializerOptions = new()
+                {
+                    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+                    WriteIndented = true
+                };
+                string jsonString = System.Text.Json.JsonSerializer.Serialize(entity, jsonSerializerOptions);
+                clonedEntity = System.Text.Json.JsonSerializer.Deserialize(jsonString, entity.GetType(), jsonSerializerOptions);
+            }
+            else // Default SerializationMethods.NewtonsoftJson
+            {
+                var jsonSettings = new Newtonsoft.Json.JsonSerializerSettings
+                {
+                    PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All,
+                    TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto,
+                    ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+                };
+                string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(entity, jsonSettings);
+                clonedEntity = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
+            }
 
-            string jsonString = JsonConvert.SerializeObject(entity, jsonSettings);
-            object clonedEntity = JsonConvert.DeserializeObject(jsonString, entity.GetType(), jsonSettings);
-
-            var primaryKeyStringOrInstance = options.PreservePrimaryKeyIdentity ? source.CreatePrimaryKeyStringOrInstance(entity) : entity;
+            var primaryKeyStringOrInstance = options.PreservePrimaryKeyIdentity ? source.CreatePrimaryKeyStringOrInstance(entity, options) : entity;
             var isEarlierClonedEntity = references.ContainsKey(primaryKeyStringOrInstance);
             if (options.PreservePrimaryKeyIdentity && isEarlierClonedEntity)
             {
@@ -189,7 +202,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             return source.Model.FindEntityType(entityClrType);
         }
 
-        private static object CreatePrimaryKeyStringOrInstance(this DbContext source, object entity)
+        private static object CreatePrimaryKeyStringOrInstance(this DbContext source, object entity, CloneOptions options)
         {
             var entityType = source.FindCurrentEntityType(entity.GetType(), null, null);
             var primaryKeyProperties = entityType?.FindPrimaryKey()?.Properties.Select(p => p.PropertyInfo).ToList();
@@ -200,12 +213,27 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
             }
 
             string primaryKeyString = null;
-            var jsonSettings = new JsonSerializerSettings
+            Func<object, string> serializeMethod;
+            
+            if (options.SerializationMethod == SerializationMethods.SystemTextJson)
             {
-                PreserveReferencesHandling = PreserveReferencesHandling.All,
-                TypeNameHandling = TypeNameHandling.Auto,
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-            };
+                System.Text.Json.JsonSerializerOptions jsonSerializerOptions = new()
+                {
+                    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+                    WriteIndented = true
+                };
+                serializeMethod = (object idPart) => System.Text.Json.JsonSerializer.Serialize(idPart, jsonSerializerOptions);
+            }
+            else // Default SerializationMethods.NewtonsoftJson
+            {
+                var jsonSettings = new Newtonsoft.Json.JsonSerializerSettings
+                {
+                    PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.All,
+                    TypeNameHandling = Newtonsoft.Json.TypeNameHandling.Auto,
+                    ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore,
+                };
+                serializeMethod = (object idPart) => Newtonsoft.Json.JsonConvert.SerializeObject(idPart, jsonSettings);
+            }
 
             for (int i = 0; i < primaryKeyProperties.Count; i++)
             {
@@ -224,7 +252,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                     separator = "-";
                 }
 
-                string idPartString = idPart.GetType() == typeof(string) ? idPart?.ToString() : JsonConvert.SerializeObject(idPart, jsonSettings);
+                string idPartString = idPart.GetType() == typeof(string) ? idPart?.ToString() : serializeMethod(idPart);
                 primaryKeyString = primaryKeyString + separator + idPartString;
             }
 
@@ -272,7 +300,7 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
                 }
 
                 var idPartPredicate = BuildPredicate<TEntity>(primaryKeyProperty.Name, ExpressionType.Equal, idPart);
-                primaryKeyExpression = AndAlso(primaryKeyExpression, idPartPredicate);
+                primaryKeyExpression = primaryKeyExpression.AndAlso(idPartPredicate);
             }
 
             return primaryKeyExpression;
@@ -282,32 +310,51 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore
         {
             var parameter = Expression.Parameter(typeof(T), "x");
             var left = propertyName.Split('.').Aggregate((Expression)parameter, Expression.Property);
-            var body = MakeBinary(comparison, left, value);
+
+            // Create a strongly-typed closure to  force EF Core to create a parameter
+            var wrapperType = typeof(Wrapper<>).MakeGenericType(left.Type);
+            var wrapper = Activator.CreateInstance(wrapperType, value);
+
+            var wrapperExpression = Expression.Constant(wrapper);
+            var valueExpression = Expression.Property(wrapperExpression, "PkValue");
+
+            var body = Expression.MakeBinary(comparison, left, valueExpression);
+
             return Expression.Lambda<Func<T, bool>>(body, parameter);
         }
 
-        private static Expression<Func<T, bool>> AndAlso<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)
+        private class Wrapper<TValue>
         {
-            // need to detect whether they use the same
-            // parameter instance; if not, they need fixing
-            ParameterExpression param = expr1.Parameters[0];
-            if (ReferenceEquals(param, expr2.Parameters[0]))
-            {
-                // simple version
-                return Expression.Lambda<Func<T, bool>>(
-                    Expression.AndAlso(expr1.Body, expr2.Body), param);
-            }
-            // otherwise, keep expr1 "as is" and invoke expr2
-            return Expression.Lambda<Func<T, bool>>(
-                Expression.AndAlso(
-                    expr1.Body,
-                    Expression.Invoke(expr2, param)), param);
+            public TValue PkValue { get; }
+            public Wrapper(TValue pkValue) => PkValue = pkValue;
         }
 
-        private static Expression MakeBinary(ExpressionType type, Expression left, object value)
+        public static Expression<Func<T, bool>> AndAlso<T>(this Expression<Func<T, bool>> expr1, Expression<Func<T, bool>> expr2)
         {
-            var right = Expression.Constant(value, left.Type);
-            return Expression.MakeBinary(type, left, right);
+            var parameter = expr1.Parameters[0];
+
+            // Rebind expr2's parameter naar expr1's parameter
+            var visitor = new ReplaceParameterVisitor(expr2.Parameters[0], parameter);
+            var body2 = visitor.Visit(expr2.Body);
+
+            var body = Expression.AndAlso(expr1.Body, body2);
+
+            return Expression.Lambda<Func<T, bool>>(body, parameter);
+        }
+
+        private class ReplaceParameterVisitor : ExpressionVisitor
+        {
+            private readonly ParameterExpression _oldParam;
+            private readonly ParameterExpression _newParam;
+
+            public ReplaceParameterVisitor(ParameterExpression oldParam, ParameterExpression newParam)
+            {
+                _oldParam = oldParam;
+                _newParam = newParam;
+            }
+
+            protected override Expression VisitParameter(ParameterExpression node)
+                => node == _oldParam ? _newParam : base.VisitParameter(node);
         }
 
         #endregion
