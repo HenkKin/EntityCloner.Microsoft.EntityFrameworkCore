@@ -61,8 +61,10 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
             Assert.Null(clone.Payment);
         }
 
-        [Fact]
-        public async Task Order_CloneWithIncludeAbstractPayment()
+        [Theory]
+        [InlineData(SerializationMethods.NewtonsoftJson)]
+        [InlineData(SerializationMethods.SystemTextJson)]
+        public async Task Order_CloneWithIncludeAbstractPayment(SerializationMethods serializationMethod)
         {
             // Arrange
             var entity = await TestDbContext.Set<Order>()
@@ -71,27 +73,42 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 .AsNoTracking()
                 .SingleAsync();
 
-            // Act
-            var clone = await TestDbContext.CloneAsync(entity);
+            switch (serializationMethod)
+            {
+                case SerializationMethods.SystemTextJson:
+                    // Act
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await TestDbContext.CloneAsync(entity, new CloneOptions { SerializationMethod = serializationMethod });
+                    });
+                    break;
 
-            // Assert
-            Assert.NotNull(clone);
-            Assert.Equal(0, clone.Id);
-            Assert.Equal(_order.Description, clone.Description);
+                default:
+                    // Act
+                    var clone = await TestDbContext.CloneAsync(entity, new CloneOptions { SerializationMethod = serializationMethod });
 
-            // Verify payment is cloned and type is preserved
-            Assert.NotNull(clone.Payment);
-            Assert.Equal(0, clone.Payment.Id);
-            Assert.IsType<CreditCardPayment>(clone.Payment);
+                    // Assert
+                    Assert.NotNull(clone);
+                    Assert.Equal(0, clone.Id);
+                    Assert.Equal(_order.Description, clone.Description);
 
-            var clonedCreditCard = (CreditCardPayment)clone.Payment;
-            Assert.Equal("1234-5678-9012-3456", clonedCreditCard.CardNumber);
-            Assert.Equal("John Doe", clonedCreditCard.CardHolder);
-            Assert.Equal(150.00m, clonedCreditCard.Amount);
+                    // Verify payment is cloned and type is preserved
+                    Assert.NotNull(clone.Payment);
+                    Assert.Equal(0, clone.Payment.Id);
+                    Assert.IsType<CreditCardPayment>(clone.Payment);
+
+                    var clonedCreditCard = (CreditCardPayment)clone.Payment;
+                    Assert.Equal("1234-5678-9012-3456", clonedCreditCard.CardNumber);
+                    Assert.Equal("John Doe", clonedCreditCard.CardHolder);
+                    Assert.Equal(150.00m, clonedCreditCard.Amount);
+                    break;
+            }         
         }
 
-        [Fact]
-        public async Task Order_CloneWithDifferentConcreteImplementation()
+        [Theory]
+        [InlineData(SerializationMethods.NewtonsoftJson)]
+        [InlineData(SerializationMethods.SystemTextJson)]
+        public async Task Order_CloneWithDifferentConcreteImplementation(SerializationMethods serializationMethod)
         {
             // Arrange - Create order with bank transfer
             var orderWithBankTransfer = new Order
@@ -109,20 +126,35 @@ namespace EntityCloner.Microsoft.EntityFrameworkCore.Tests
                 .AsNoTracking()
                 .SingleAsync();
 
-            // Act
-            var clone = await TestDbContext.CloneAsync(entity);
 
-            // Assert
-            Assert.NotNull(clone);
-            Assert.Equal(0, clone.Id);
-            Assert.NotNull(clone.Payment);
-            Assert.Equal(0, clone.Payment.Id);
-            Assert.IsType<BankTransferPayment>(clone.Payment);
+            // Act + Assert
+            switch (serializationMethod)
+            {
+                case SerializationMethods.SystemTextJson:
+                    // Act
+                    await Assert.ThrowsAsync<NotSupportedException>(async () =>
+                    {
+                        await TestDbContext.CloneAsync(entity, new CloneOptions { SerializationMethod = serializationMethod });
+                    });
+                    break;
 
-            var clonedBankTransfer = (BankTransferPayment)clone.Payment;
-            Assert.Equal("IT60X0542811101000000123456", clonedBankTransfer.Iban);
-            Assert.Equal("Test Bank", clonedBankTransfer.BankName);
-            Assert.Equal(300.00m, clonedBankTransfer.Amount);
+                default:
+                    // Act
+                    var clone = await TestDbContext.CloneAsync(entity, new CloneOptions { SerializationMethod = serializationMethod });
+
+                    // Assert
+                    Assert.NotNull(clone);
+                    Assert.Equal(0, clone.Id);
+                    Assert.NotNull(clone.Payment);
+                    Assert.Equal(0, clone.Payment.Id);
+                    Assert.IsType<BankTransferPayment>(clone.Payment);
+
+                    var clonedBankTransfer = (BankTransferPayment)clone.Payment;
+                    Assert.Equal("IT60X0542811101000000123456", clonedBankTransfer.Iban);
+                    Assert.Equal("Test Bank", clonedBankTransfer.BankName);
+                    Assert.Equal(300.00m, clonedBankTransfer.Amount);
+                    break;
+            }
         }
     }
 }
